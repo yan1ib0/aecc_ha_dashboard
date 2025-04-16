@@ -31,4 +31,14 @@ export default defineConfig({
       fileName: "my-ha-vue-card",
     },
   },
+  server: {
+    proxy: {
+      '/api': {
+        // target: 'http://192.168.3.7',
+        target: 'https://monitor.ai-ec.cloud:8443',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/api/, '')
+      }
+    }
+  }
 });
