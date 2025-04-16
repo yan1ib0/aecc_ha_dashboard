@@ -80,7 +80,7 @@ api.interceptors.request.use(
       if (cookies.JSESSIONID) {
         currentJSESSIONID = cookies.JSESSIONID;
         config.headers['Cookie'] = `JSESSIONID=${currentJSESSIONID}`;
-        console.log('从浏览器cookie获取JSESSIONID:', currentJSESSIONID);
+        // console.log('从浏览器cookie获取JSESSIONID:', currentJSESSIONID);
       }
     }
 
@@ -90,7 +90,7 @@ api.interceptors.request.use(
       // config.headers['Authorization'] = `Bearer ${localStorage.getItem('token')}`;
     }
 
-    console.log('发送请求:', config.url, '请求头:', JSON.stringify(config.headers));
+    // console.log('发送请求:', config.url, '请求头:', JSON.stringify(config.headers));
     return config;
   },
   error => {
@@ -148,7 +148,7 @@ export const login = async (email, password) => {
         const newJSESSIONID = extractJSESSIONID(setCookieHeader.toString());
         if (newJSESSIONID) {
           currentJSESSIONID = newJSESSIONID;
-          console.log('登录获取新JSESSIONID:', currentJSESSIONID);
+          // console.log('登录获取新JSESSIONID:', currentJSESSIONID);
         }
       }
 
@@ -160,7 +160,7 @@ export const login = async (email, password) => {
         const cookies = getCookies();
         if (cookies.JSESSIONID) {
           currentJSESSIONID = cookies.JSESSIONID;
-          console.log('从cookie获取登录后JSESSIONID:', currentJSESSIONID);
+          // console.log('从cookie获取登录后JSESSIONID:', currentJSESSIONID);
         }
       }
       return response;
@@ -228,7 +228,7 @@ export const getEnergyFlowData = async (plantId = 1102) => {
     const response = await api.post('/energy/getHomeCountData', null, {
       params: { plantId }
     });
-    console.log('能源流向数据:', response);
+    // console.log('能源流向数据:', response);
     return response;
   } catch (error) {
     console.error('获取能源流向数据失败:', error);
@@ -244,7 +244,7 @@ export const getStatusNow = async (plantId = 1102, deviceSn = '') => {
     const response = await api.post('/energy/getEnergyDataDay', null, {
       params: { plantId, time, deviceSn }
     });
-    console.log('电池状态数据:', response);
+    // console.log('电池状态数据:', response);
     return response;
   } catch (error) {
     console.error('获取电池状态数据失败:', error);
@@ -270,7 +270,7 @@ export const getDeviceAllListByPlantId = async (plantId) => {
     const response = await api.get('/device/getDeviceAllListByPlantId', {
       params: { plantId }
     })
-    console.log('当前电站下所有设备:', response);
+    // console.log('当前电站下所有设备:', response);
     return response;
   } catch (error) {
     console.error('获取设备自定义详情信息失败:', error);

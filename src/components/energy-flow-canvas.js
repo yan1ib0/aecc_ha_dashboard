@@ -531,98 +531,12 @@ class EnergyFlowCanvas {
     // 如果连接不可见或节点不存在，则不绘制粒子
     if (!sourceNode || !targetNode || !particle.link.visible) return;
 
-    const sourceX = sourceNode.x;
-    const sourceY = sourceNode.y;
-    const targetX = targetNode.x;
-    const targetY = targetNode.y;
     const t = particle.progress; // 粒子沿路径的进度 (0 到 1)
-    const nodeRadius = this.nodeRadius; // 使用当前节点半径
 
-    // 查找四个主要节点以进行路径计算逻辑
-    const nodes = this.nodes;
-    const pvNode = nodes.find(n => n.name === '光伏');
-    const batteryNode = nodes.find(n => n.name === '电池');
-    const gridNode = nodes.find(n => n.name === '电网');
-    const homeLoadNode = nodes.find(n => n.name === '家庭负载');
+    const path = this.calculatePathPoints(particle.link);
+    const x = this.getPointOnPath(t, path.controlPoints).x;
+    const y = this.getPointOnPath(t, path.controlPoints).y;
 
-    let x, y; // 粒子位置
-
-    // --- 路径计算逻辑 ---
-    // 需要精确镜像 drawLink 的逻辑。
-    // 对于复杂的带 arcTo 的路径，下面的实现使用了简化的二次贝塞尔曲线作为近似。
-    // 如果需要精确路径，需要仔细分析 drawLink 中的 arcTo 并实现分段插值。
-
-    // 计算起点和终点（考虑节点半径）
-    const angle = Math.atan2(targetY - sourceY, targetX - sourceX);
-    const startX = sourceX + Math.cos(angle) * nodeRadius;
-    const startY = sourceY + Math.sin(angle) * nodeRadius;
-    const endAngle = Math.atan2(sourceY - targetY, sourceX - targetX); // 进入目标节点的角度的反向
-    const endX = targetX + Math.cos(endAngle) * nodeRadius;
-    const endY = targetY + Math.sin(endAngle) * nodeRadius;
-
-    // 检查是否有自定义控制点配置
-    const linkKey = `${particle.link.source}-${particle.link.target}`;
-    const customConfig = this.customControlPoints[linkKey];
-
-    if (customConfig && customConfig.offset) {
-      // 使用自定义控制点配置
-      const midX = (startX + endX) / 2 + (startY - endY) * customConfig.offset.x;
-      const midY = (startY + endY) / 2 + (endX - startX) * customConfig.offset.y;
-      const pos = this.getPointOnQuadraticBezier(startX, startY, midX, midY, endX, endY, t);
-      x = pos.x;
-      y = pos.y;
-    }
-    else if (pvNode && batteryNode && gridNode && homeLoadNode &&
-        (
-         (particle.link.source === '光伏' && (particle.link.target === '家庭负载' || particle.link.target === '电网')) ||
-         (particle.link.source === '电池' && (particle.link.target === '家庭负载' || particle.link.target === '电网')) ||
-         (particle.link.target === '光伏' && (particle.link.source === '家庭负载' || particle.link.source === '电网')) || // 反向流动?
-         (particle.link.target === '电池' && (particle.link.source === '家庭负载' || particle.link.source === '电网'))   // 反向流动?
-        )
-       )
-    {
-        // --- 对特定复杂路径使用近似 ---
-        // console.log(`Approximating path for ${particle.link.source} -> ${particle.link.target}`);
-
-        // 使用简化的二次贝塞尔曲线近似这些复杂路径
-        // 控制点可以根据需要调整以获得更好的曲线形状
-        let midX, midY;
-        if (particle.link.source === '光伏' && particle.link.target === '家庭负载') {
-            midX = (startX + endX) / 2 + (startY - endY) * 0.3; // 控制点偏离直线
-            midY = (startY + endY) / 2 + (endX - startX) * 0.1;
-        } else if (particle.link.source === '光伏' && particle.link.target === '电网') {
-            midX = (startX + endX) / 2 + (startY - endY) * -0.3;
-            midY = (startY + endY) / 2 + (endX - startX) * -0.1;
-        } else if (particle.link.source === '电池' && particle.link.target === '电网') {
-            midX = (startX + endX) / 2 + (startY - endY) * -0.3;
-            midY = (startY + endY) / 2 + (endX - startX) * 0.1;
-        } else if (particle.link.source === '电池' && particle.link.target === '家庭负载') {
-            midX = (startX + endX) / 2 + (startY - endY) * 0.3;
-            midY = (startY + endY) / 2 + (endX - startX) * -0.1;
-        } else {
-             // 如果有其他复杂路径或反向路径，使用默认中点
-             midX = (startX + endX) / 2;
-             midY = (startY + endY) / 2;
-        }
-
-        const pos = this.getPointOnQuadraticBezier(startX, startY, midX, midY, endX, endY, t);
-        x = pos.x;
-        y = pos.y;
-
-    } else {
-        // --- 默认情况: 直线或简单的二次贝塞尔曲线 ---
-        if (Math.abs(sourceX - targetX) < 10 || Math.abs(sourceY - targetY) < 10) {
-            // 直线插值
-            const pos = this.getPointOnLine(startX, startY, endX, endY, t);
-            x = pos.x; y = pos.y;
-        } else {
-            // 二次贝塞尔插值 (使用中点作为控制点)
-            const midX = (startX + endX) / 2;
-            const midY = (startY + endY) / 2;
-            const pos = this.getPointOnQuadraticBezier(startX, startY, midX, midY, endX, endY, t);
-            x = pos.x; y = pos.y;
-        }
-    }
 
 
     // 绘制粒子（如果位置有效）
@@ -652,7 +566,7 @@ class EnergyFlowCanvas {
       if (particle.progress >= 1) {
         particle.progress = 0; // 重置到起点
         // 可选: 添加小的随机偏移以避免聚集
-        // particle.progress = Math.random() * 0.05;
+        particle.progress = Math.random() * 0.05;
       }
     });
   }
@@ -845,11 +759,11 @@ class EnergyFlowCanvas {
       }
 
       // 获取电池状态
-      const batteryStatus = await getStatusNow();
-      if (batteryStatus) {
-        console.log('获取到曲线图数据:', batteryStatus);
-        // this.updateBatteryStatus(batteryStatus);
-      }
+      // const batteryStatus = await getStatusNow();
+      // if (batteryStatus) {
+      //   console.log('获取到曲线图数据:', batteryStatus);
+      //   // this.updateBatteryStatus(batteryStatus);
+      // }
     } catch (error) {
       console.error('获取数据失败:', error);
     }
@@ -1017,11 +931,93 @@ class EnergyFlowCanvas {
   }
 
   // 获取二次贝塞尔曲线上的点
-  getPointOnQuadraticBezier(x0, y0, x1, y1, x2, y2, t) {
-    const oneMinusT = 1 - t;
+  calculatePathPoints(link) {
+    const sourceNode = this.nodes.find(n => n.name === link.source);
+    const targetNode = this.nodes.find(n => n.name === link.target);
+    const nodes = this.nodes;
+    const pvNode = nodes.find(n => n.name === '光伏');
+    const batteryNode = nodes.find(n => n.name === '电池');
+    const gridNode = nodes.find(n => n.name === '电网');
+    const homeLoadNode = nodes.find(n => n.name === '家庭负载');
+
+    const angle = Math.atan2(targetNode.y - sourceNode.y, targetNode.x - sourceNode.x);
+    const start = {
+      x: sourceNode.x + Math.cos(angle) * this.nodeRadius,
+      y: sourceNode.y + Math.sin(angle) * this.nodeRadius
+    };
+    const endAngle = Math.atan2(sourceNode.y - targetNode.y, sourceNode.x - targetNode.x);
+    const end = {
+      x: targetNode.x + Math.cos(endAngle) * this.nodeRadius,
+      y: targetNode.y + Math.sin(endAngle) * this.nodeRadius
+    };
+
+    let controlPoints = [];
+    const linkType = `${link.source}-${link.target}`;
+
+    if (pvNode && batteryNode && gridNode && homeLoadNode) {
+      const centerX = (pvNode.x + batteryNode.x) / 2;
+      const centerY = (gridNode.y + homeLoadNode.y) / 2;
+      const cornerDistance = Math.sqrt(this.nodeRadius) * 2;
+
+      switch(linkType) {
+        case '光伏-家庭负载':
+          controlPoints = [
+            { x: start.x, y: start.y },
+            { x: start.x, y: centerY - cornerDistance * 1.5 },
+            { x: end.x, y: centerY - cornerDistance * 1.5 },
+            { x: end.x, y: end.y }
+          ];
+          break;
+        case '光伏-电网':
+          controlPoints = [
+            { x: start.x, y: start.y },
+            { x: start.x, y: centerY - cornerDistance * 1.5 },
+            { x: end.x, y: centerY - cornerDistance * 1.5 },
+            { x: end.x, y: end.y }
+          ];
+          break;
+        case '电池-电网':
+          controlPoints = [
+            { x: start.x, y: start.y },
+            { x: start.x, y: centerY + cornerDistance * 1.5 },
+            { x: end.x, y: centerY + cornerDistance * 1.5 },
+            { x: end.x, y: end.y }
+          ];
+          break;
+        case '电池-家庭负载':
+          controlPoints = [
+            { x: start.x, y: start.y },
+            { x: start.x, y: centerY + cornerDistance * 1.5 },
+            { x: end.x, y: centerY + cornerDistance * 1.5 },
+            { x: end.x, y: end.y }
+          ];
+          break;
+        default:
+          const midX = (start.x + end.x) / 2;
+          const midY = (start.y + end.y) / 2;
+          controlPoints = [
+            { x: start.x, y: start.y },
+            { x: midX, y: midY },
+            { x: end.x, y: end.y }
+          ];
+      }
+    }
+
+    return { controlPoints };
+  }
+
+  getPointOnPath(t, controlPoints) {
+    const n = controlPoints.length - 1;
+    const segment = t * n;
+    const index = Math.min(Math.floor(segment), n - 1);
+    const localT = segment - index;
+    
+    const p0 = controlPoints[index];
+    const p1 = controlPoints[index + 1];
+    
     return {
-        x: oneMinusT * oneMinusT * x0 + 2 * oneMinusT * t * x1 + t * t * x2,
-        y: oneMinusT * oneMinusT * y0 + 2 * oneMinusT * t * y1 + t * t * y2
+      x: p0.x + (p1.x - p0.x) * localT,
+      y: p0.y + (p1.y - p0.y) * localT
     };
   }
 

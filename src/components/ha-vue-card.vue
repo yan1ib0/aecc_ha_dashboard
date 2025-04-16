@@ -74,6 +74,10 @@ onBeforeMount(() => {
 });
 
 onMounted(() => {
+  // 启动3秒定时器模拟数据更新
+  const simulationTimer = setInterval(updateCharts, 15000);
+  onUnmounted(() => clearInterval(simulationTimer));
+
   console.log('[ha-vue-card] 组件已挂载');
   console.log('[ha-vue-card] hass对象:', props.hass);
   console.log('[ha-vue-card] config对象:', props.config);
@@ -330,8 +334,12 @@ const startDeviceUpdateTimer = () => {
 };
 
 const updateCharts = () => {
+  // 动态数据生成方法
+  
+
   // 更新能流图
   if (energyChart) {
+    const mockData = currentDeviceList.value;
     const containerWidth = energyFlowChart.value.clientWidth;
     const containerHeight = containerWidth * 2 / 3; // 保持3:2宽高比
 
@@ -406,33 +414,18 @@ const updateCharts = () => {
     ];
 
     const links = [
-      // 从电网到家庭负载的连线
-      { source: '电网', target: '家庭负载', value: 600, color: '#673AB7', curveness: 0 },
-
-      // 从光伏出发的连线
-      { source: '光伏', target: '家庭负载', value: 1500, color: '#FF9800', curveness: 0 },
-      { source: '光伏', target: '电池', value: 800, color: '#FF9800', curveness: 0 },
-      { source: '光伏', target: '电网', value: 200, color: '#FF9800', curveness: 0 },
-
-      // 从家庭负载出发的连线
-      { source: '家庭负载', target: '充电桩', value: 500, color: '#00BCD4', curveness: 0 },
-      { source: '家庭负载', target: '智能负载', value: 300, color: '#00BCD4', curveness: 0 },
-
-      // 从电池出发的连线
-      { source: '电池', target: '家庭负载', value: 1200, color: '#00BCD4', curveness: 0 },
-      { source: '电池', target: '电网', value: 300, color: '#00BCD4', curveness: 0 }
+      { source: '电网', target: '家庭负载', value: Math.abs(mockData.grid), color: '#673AB7', curveness: 0 },
+      { source: '光伏', target: '家庭负载', value: mockData.solar * 0.6, color: '#FF9800', curveness: 0 },
+      { source: '光伏', target: '电池', value: mockData.solar * 0.3, color: '#FF9800', curveness: 0 },
+      { source: '光伏', target: '电网', value: mockData.solar * 0.1, color: '#FF9800', curveness: 0 },
+      { source: '家庭负载', target: '充电桩', value: mockData.charger, color: '#00BCD4', curveness: 0 },
+      { source: '家庭负载', target: '智能负载', value: mockData.smartLoad, color: '#00BCD4', curveness: 0 },
+      { source: '电池', target: '家庭负载', value: Math.abs(mockData.battery), color: '#00BCD4', curveness: 0 },
+      { source: '电池', target: '电网', value: Math.abs(mockData.battery * 0.2), color: '#00BCD4', curveness: 0 }
     ];
 
     // 设置粒子速度因子
-    energyChart.setParticleSpeed(0.15);
-
-    // 修改拐弯路径的控制点
-    energyChart.setCustomControlPoints({
-      '光伏-家庭负载': { offset: { x: 0.3, y: 0.1 } },
-      '光伏-电网': { offset: { x: -0.3, y: -0.1 } },
-      '电池-家庭负载': { offset: { x: 0.3, y: -0.1 } },
-      '电池-电网': { offset: { x: -0.3, y: 0.1 } }
-    });
+    energyChart.setParticleSpeed(0.8);
 
     // 强制更新Canvas尺寸后再设置数据
     energyChart.resize();
