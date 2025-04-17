@@ -32,18 +32,6 @@ class EnergyFlowCanvas {
     this.nodeRadius = 30;  // 默认节点半径
     this.loadedIcons = new Map();
     this.lastUpdateTime = Date.now(); // 初始化上次更新时间戳
-    this.customControlPoints = {}; // 添加自定义控制点配置
-
-    // 初始化数据
-    this.flowData = {
-      pv_to_grid: 0,
-      pv_to_battery: 0,
-      pv_to_load: 0,
-      battery_to_grid: 0,
-      battery_to_load: 0,
-      grid_to_battery: 0,
-      grid_to_load: 0
-    };
 
     // 初始化数据更新定时器
     this.dataRefreshInterval = null;
@@ -53,6 +41,7 @@ class EnergyFlowCanvas {
 
     // 启动数据更新定时器
     this.startDataRefreshTimer();
+
 
     this.resize();
     window.addEventListener('resize', () => this.resize());
@@ -67,93 +56,42 @@ class EnergyFlowCanvas {
 
     // 设置新的定时器
     this.dataRefreshInterval = setInterval(() => {
-      this.fetchData();
-    }, 60000); // 每分钟刷新一次
-  }
-
-  // 重新初始化数据
-  reinitialize() {
-    // 清除现有数据
-    this.nodes = [];
-    this.links = [];
-    this.particles = [];
-    this.loadedIcons.clear();
-
-    // 重置流数据
-    this.flowData = {
-      pv_to_grid: 0,
-      pv_to_battery: 0,
-      pv_to_load: 0,
-      battery_to_grid: 0,
-      battery_to_load: 0,
-      grid_to_battery: 0,
-      grid_to_load: 0
-    };
-
-    // 重新获取数据并重启定时器
-    this.loginAndFetchData();
-    this.startDataRefreshTimer();
-  }
-
-  // 清理资源
-  destroy() {
-    // 清除定时器
-    if (this.dataRefreshInterval) {
-      clearInterval(this.dataRefreshInterval);
-      this.dataRefreshInterval = null;
-    }
-
-    // 清除动画帧
-    if (this.animationFrameId) {
-      cancelAnimationFrame(this.animationFrameId);
-      this.animationFrameId = null;
-    }
-
-    // 移除事件监听
-    window.removeEventListener('resize', () => this.resize());
-
-    // 清除数据
-    this.nodes = [];
-    this.links = [];
-    this.particles = [];
-    this.loadedIcons.clear();
+      this.fetchData()
+    }, 60*1000); // 每分钟刷新一次
   }
 
 
   resize() {
     const rect = this.container.getBoundingClientRect();
-    // 设置宽度为容器宽度
     const width = rect.width;
-    // 计算高度为宽度的2/3，实现3:2的宽高比
-    const height = Math.floor(width * 2 / 3);
+    // --- 关键：内部 Canvas 高度始终按 2:3 计算 ---
+    const internalHeight = Math.max(150, Math.floor(width * 2 / 3)); // 使用 2:3
 
-    this.canvas.width = width;
-    this.canvas.height = height;
+    // 检查内部尺寸是否变化
+    if (this.canvas.width !== width || this.canvas.height !== internalHeight) {
+        this.canvas.width = width;
+        this.canvas.height = internalHeight; // 设置内部 Canvas 的实际高宽
+        // --- 移除对 canvas.style.height 的设置 ---
+        // this.canvas.style.height = `${internalHeight}px`; // 不再需要由内部控制样式
 
-    // 根据新的宽高比调整canvas样式
-    this.canvas.style.width = '100%';
-    this.canvas.style.height = `${height}px`;
+        this.updateNodeRadius(); // 基于内部尺寸更新半径
 
-    // 根据容器大小调整节点半径
-    this.updateNodeRadius();
-
-    this.draw();
+         // 重启动画循环
+         if (this.animationFrameId) {
+             cancelAnimationFrame(this.animationFrameId);
+         }
+         this.lastUpdateTime = Date.now();
+         this.draw(); // 使用新的内部尺寸开始绘制
+    }
   }
 
   updateNodeRadius() {
+    // 计算半径时使用内部 canvas 尺寸
     const minDimension = Math.min(this.canvas.width, this.canvas.height);
-    const widthFactor = this.canvas.width / 600;  // 基于标准宽度600px的缩放因子
-    // 计算基础半径，整体增大节点
-    const baseRadius = Math.min(25, Math.max(18, minDimension / 15));
-    // 应用宽度因子，但限制最小和最大值
-    this.nodeRadius = Math.max(18, Math.min(35, baseRadius * Math.sqrt(widthFactor)));
+    const baseRadius = Math.max(18, Math.min(30, minDimension / 15));
+    this.nodeRadius = baseRadius;
   }
 
-  setParticleSpeed(speedFactor) {
-    this.particleSpeedFactor = speedFactor > 0 ? speedFactor : 1;
-    // 更新现有粒子的速度
-    this.initParticles(); // 重新初始化以应用新的速度因子
-  }
 
   /**
    * 设置节点和连接数据，并重新初始化粒子系统和绘制流程
@@ -164,7 +102,6 @@ class EnergyFlowCanvas {
     this.nodes = nodes;
     this.links = links;
     this.loadIcons();
-    this.initParticles();
     this.draw();
   }
 
@@ -181,55 +118,6 @@ class EnergyFlowCanvas {
     });
   }
 
-  initParticles() {
-    this.particles = [];
-    this.links.forEach(link => {
-      // 只为可见且功率大于0的连接创建粒子
-      if (!link.visible || link.value <= 0) return;
-
-      const sourceNode = this.nodes.find(n => n.name === link.source);
-      const targetNode = this.nodes.find(n => n.name === link.target);
-
-      if (sourceNode && targetNode) {
-        const dx = targetNode.x - sourceNode.x;
-        const dy = targetNode.y - sourceNode.y;
-        // 估算距离 - 对于曲线路径需要改进
-        const estimatedDistance = Math.sqrt(dx * dx + dy * dy);
-
-        // 根据功率调整粒子数量 (功率越大粒子越多)
-        // 保持密度大致恒定
-        const powerFactor = Math.log1p(link.value / 50); // 对功率进行对数缩放
-        const baseCount = Math.max(5, Math.min(30, Math.ceil(powerFactor * 5))); // 基础粒子数
-        // 根据距离调整，最少3个粒子
-        const count = Math.max(3, Math.ceil(baseCount * (estimatedDistance / 150)));
-
-        // 根据功率计算期望持续时间 (3 到 10 秒)
-        // 功率越高 -> 持续时间越短 (速度越快)
-        // 将功率范围 (例如 1W 到 10000W) 映射到持续时间范围 (10s 到 3s)
-        const maxPower = 10000; // 假设用于缩放的最大功率
-        const minDuration = 3 * 1000; // 3 秒 (毫秒)
-        const maxDuration = 10 * 1000; // 10 秒 (毫秒)
-        // 使用反比关系: duration = maxDur - (power/maxPower) * (maxDur - minDur)
-        // 限制功率以避免极端值
-        const clampedPower = Math.max(1, Math.min(link.value, maxPower));
-        const duration = maxDuration - ((clampedPower / maxPower) * (maxDuration - minDuration));
-
-        // 根据持续时间计算速度
-        // progress 从 0 到 1。所以 speed 应该是 1 / duration (progress 单位/毫秒)
-        const baseSpeed = 1 / duration; // 进度单位/毫秒
-
-        for (let i = 0; i < count; i++) {
-          this.particles.push({
-            link,
-            progress: Math.random(), // 在随机位置开始
-            // 应用速度因子，速度单位是 progress/ms
-            speed: baseSpeed * this.particleSpeedFactor
-          });
-        }
-      }
-    });
-  }
-
   drawNode(node) {
     const { ctx } = this;
     ctx.save();
@@ -237,35 +125,56 @@ class EnergyFlowCanvas {
     // 绘制节点圆形背景
     ctx.beginPath();
     ctx.arc(node.x, node.y, this.nodeRadius, 0, Math.PI * 2);
-    ctx.fillStyle = 'white';
+    ctx.fillStyle = 'white'; // 使用白色背景以确保图标清晰
     ctx.fill();
     ctx.strokeStyle = node.color;
     ctx.lineWidth = 2;
     ctx.stroke();
 
-    // 绘制图标 - 增大图标尺寸比例
+    // 绘制图标
     const icon = this.loadedIcons.get(node.name);
     if (icon) {
-      const iconSize = this.nodeRadius; // 图标尺寸比例从0.8到1.0
+      const iconSize = this.nodeRadius * 1.0; // 图标尺寸比例略微调整
       ctx.drawImage(icon, node.x - iconSize / 2, node.y - iconSize / 2, iconSize, iconSize);
     }
 
-    // 绘制节点标签 - 增大字体
-    const fontSize = Math.max(12, Math.min(16, this.nodeRadius * 0.5)); // 增大字体尺寸
-    ctx.font = `bold ${fontSize}px Arial`; // 添加粗体
+    // --- 修改标签和功率位置 ---
+    const fontSize = Math.max(12, Math.min(16, this.nodeRadius * 0.5));
+    ctx.font = `bold ${fontSize}px Arial`;
     ctx.fillStyle = '#333';
     ctx.textAlign = 'center';
-    ctx.fillText(node.name, node.x, node.y - this.nodeRadius - 10);
 
-    // 绘制功率值 - 增大字体
-    const powerValues = node.value.split('\n');
-    powerValues.forEach((value, index) => {
-      ctx.fillText(value, node.x, node.y + this.nodeRadius + 15 + (index * fontSize));
+    // 计算文本起始 Y 坐标 (图标下方)
+    let textY = node.y + this.nodeRadius + 15; // 基础偏移
+
+    // --- 添加调试日志 ---
+    // 打印节点名称和它的 value 属性，以检查数据是否正确传递
+    // console.log(`Drawing Node: ${node.name}, Value Received: '${node.value}'`);
+
+    // 绘制节点名称 (在功率上方)
+    ctx.fillText(node.name, node.x, textY);
+    textY += fontSize + 2; // 增加行间距
+
+    // 绘制功率值 (增加对 value 的检查)
+    const nodeValue = node.value; // 获取 value
+    const powerValues = typeof nodeValue === 'string' && nodeValue.trim() !== '' ? nodeValue.split('\n') : []; // 确保 value 是非空字符串再分割
+
+    if (powerValues.length === 0 && typeof nodeValue !== 'undefined') { // 如果 value 不是 undefined 但处理后为空数组，也提示一下
+        console.warn(`Node ${node.name} has value that resulted in empty powerValues: `, nodeValue);
+    }
+
+    powerValues.forEach((valueLine) => { // 使用处理过的 valueLine
+      if (typeof valueLine === 'string') { // 确保是字符串
+        ctx.fillText(valueLine.trim(), node.x, textY); // trim() 去除可能的前后空格
+        textY += fontSize; // 下一行功率值的位置
+      }
     });
+    // --- 结束修改 ---
 
     ctx.restore();
   }
 
+  // 绘制连接线，根据要求调整路径（直线或曲线）
   drawLink(link) {
     const { ctx } = this;
     const sourceNode = this.nodes.find(n => n.name === link.source);
@@ -273,302 +182,227 @@ class EnergyFlowCanvas {
 
     if (!sourceNode || !targetNode) return;
 
-    // 获取节点中心点
-    const sourceX = sourceNode.x;
-    const sourceY = sourceNode.y;
-    const targetX = targetNode.x;
-    const targetY = targetNode.y;
+    const sourceX = sourceNode.x; const sourceY = sourceNode.y;
+    const targetX = targetNode.x; const targetY = targetNode.y;
 
-    // 查找四个主要节点
-    const nodes = this.nodes;
-    const pvNode = nodes.find(n => n.name === '光伏');
-    const batteryNode = nodes.find(n => n.name === '电池');
-    const gridNode = nodes.find(n => n.name === '电网');
-    const homeLoadNode = nodes.find(n => n.name === '家庭负载');
+    const homeNode = this.nodes.find(n => n.name === '家庭负载');
+    const gridNode = this.nodes.find(n => n.name === '电网');
+    const solarNode = this.nodes.find(n => n.name === '光伏');
+    const batteryNode = this.nodes.find(n => n.name === '电池');
+    const chargerNode = this.nodes.find(n => n.name === '充电桩');
+    const smartNode = this.nodes.find(n => n.name === '智能负载');
 
-    // 特殊处理各种连接
-    if (pvNode && batteryNode && gridNode && homeLoadNode) {
-      // 计算中心点
-      const centerX = (pvNode.x + batteryNode.x) / 2;
-      const centerY = (gridNode.y + homeLoadNode.y) / 2;
+    ctx.save();
+    ctx.strokeStyle = link.color;
+    const baseLineWidth = 1; const maxLineWidth = 4;
+    const powerFactor = Math.min(1, Math.abs(link.value) / 1000);
+    const lineWidth = baseLineWidth + (maxLineWidth - baseLineWidth) * powerFactor;
+    ctx.lineWidth = lineWidth;
+    ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+    ctx.beginPath();
 
-      // 计算拐点公共参数 - 增大拐点距离
-      const cornerDistance = Math.sqrt(this.nodeRadius) * 2; // 增大拐点距离
+    let startX, startY, endX, endY, cp1x, cp1y, cp2x, cp2y;
+    const radius = this.nodeRadius;
+    const angle = Math.atan2(targetY - sourceY, targetX - sourceX);
 
-      // 设置线条样式
-      ctx.save();
-      ctx.strokeStyle = link.color;
-      const lineWidth = Math.max(1.5, Math.min(3, this.nodeRadius / 10 * Math.min(4, link.value / 500)));
-      ctx.lineWidth = lineWidth;
-      ctx.beginPath();
 
-      // 1. 光伏到家庭负载的连接
-      if (link.source === '光伏' && link.target === '家庭负载') {
-        // 计算从光伏节点右下方出发的点（约45度角）
-        const startAngle = Math.PI / 4; // 右下方45度
-        const startX = sourceX + Math.cos(startAngle) * this.nodeRadius;
-        const startY = sourceY + Math.sin(startAngle) * this.nodeRadius;
+    // --- 根据连接类型绘制路径 ---
 
-        // 计算到家庭负载左上方的终点（约为45度角位置）
-        const endAngle = Math.PI / 4; // 右上方45度
-        const endX = targetX + Math.cos(endAngle) * this.nodeRadius;
-        const endY = targetY + Math.sin(endAngle) * this.nodeRadius;
-
-        // 基于参考中点计算拐点 - 调整拐点位置
-        const cornerX = centerX + cornerDistance;
-        const cornerY = centerY - cornerDistance * 1.5; // 使水平线离x轴更远
-
-        // 圆角半径 - 增大圆弧半径
-        const radius = Math.min(20, Math.min(
-          Math.abs(cornerY - startY) * 0.3,
-          Math.abs(endX - cornerX) * 0.3
-        ));
-
-        // 从光伏节点右下方开始
-        ctx.moveTo(startX, startY);
-
-        // 从起点垂直向下到拐角点前
-        ctx.lineTo(startX, cornerY - radius);
-
-        // 绘制第一个圆角
-        ctx.arcTo(startX, cornerY, startX + radius, cornerY, radius);
-
-        // 水平线到家庭负载节点下方
-        const targetPointX = endX;
-        ctx.lineTo(targetPointX, cornerY);
-
-        // 垂直向上到终点
-        ctx.lineTo(endX, endY);
-      }
-      // 2. 光伏到电网的连接
-      else if (link.source === '光伏' && link.target === '电网') {
-        // 从光伏节点左下角出发
-        const startAngle = Math.PI * 3 / 4; // 左下方135度
-        const startX = sourceX + Math.cos(startAngle) * this.nodeRadius;
-        const startY = sourceY + Math.sin(startAngle) * this.nodeRadius;
-
-        // 到电网节点右上角
-        const endAngle = Math.PI / 4; // 右上方45度
-        const endX = targetX + Math.cos(endAngle) * this.nodeRadius;
-        const endY = targetY + Math.sin(endAngle) * this.nodeRadius;
-
-        // 计算拐点 - 使用中点作为参考
-        const cornerX = centerX - cornerDistance; // 向左移动
-        const cornerY = centerY - cornerDistance * 1.5; // 使水平线离x轴更远
-
-        // 圆角半径 - 增大圆弧半径
-        const radius = Math.min(20, Math.min(
-          Math.abs(cornerY - startY) * 0.3,
-          Math.abs(endX - cornerX) * 0.3
-        ));
-
-        // 从光伏节点左下方开始
-        ctx.moveTo(startX, startY);
-
-        // 从起点垂直向上到拐角点前
-        ctx.lineTo(startX, cornerY - radius);
-
-        // 绘制第一个圆角
-        ctx.arcTo(startX, cornerY, startX - radius, cornerY, radius);
-
-        // 水平线到电网节点下方
-        const targetPointX = endX;
-        ctx.lineTo(targetPointX, cornerY);
-
-        // 垂直向上到终点
-        ctx.lineTo(endX, endY);
-      }
-      // 3. 电池到电网的连接
-      else if (link.source === '电池' && link.target === '电网') {
-        // 从电池节点左上角出发
-        const startAngle = Math.PI * 3 / 4; // 左上方135度
-        const startX = sourceX + Math.cos(startAngle) * this.nodeRadius;
-        const startY = sourceY + Math.sin(startAngle) * this.nodeRadius;
-
-        // 到电网节点右上角
-        const endAngle = Math.PI / 4; // 右上方45度
-        const endX = targetX + Math.cos(endAngle) * this.nodeRadius;
-        const endY = targetY + Math.sin(endAngle) * this.nodeRadius;
-
-        // 计算拐点 - 通过y轴对称于光伏-电网的拐点
-        const symmetryAxisX = (gridNode.x + homeLoadNode.x) / 2;
-        const pvGridCornerX = centerX - cornerDistance; // 光伏到电网的拐点
-        const pvGridCornerY = centerY + cornerDistance * 1.5; // 使水平线离x轴更远
-
-        const cornerX = 2 * symmetryAxisX - pvGridCornerX; // 沿y轴对称
-        const cornerY = pvGridCornerY; // y坐标保持一致
-
-        // 圆角半径 - 增大圆弧半径
-        const radius = Math.min(20, Math.min(
-          Math.abs(cornerY - startY) * 0.3,
-          Math.abs(endX - cornerX) * 0.3
-        ));
-
-        // 从电池节点左上方开始
-        ctx.moveTo(startX, startY);
-
-        // 从起点垂直向上到拐角点前
-        ctx.lineTo(startX, cornerY + radius);
-
-        // 绘制第一个圆角
-        ctx.arcTo(startX, cornerY, startX - radius, cornerY, radius);
-
-        // 水平线到电网节点下方
-        const targetPointX = endX;
-        ctx.lineTo(targetPointX, cornerY);
-
-        // 垂直向上到终点
-        ctx.lineTo(endX, endY);
-      }
-      // 4. 电池到家庭负载的连接
-      else if (link.source === '电池' && link.target === '家庭负载') {
-        // 从电池节点右上角出发
-        const startAngle = Math.PI / 4; // 右上方45度
-        const startX = sourceX + Math.cos(startAngle) * this.nodeRadius;
-        const startY = sourceY + Math.sin(startAngle) * this.nodeRadius;
-
-        // 到家庭负载节点左上角
-        const endAngle = Math.PI / 4; // 左上角45度
-        const endX = targetX + Math.cos(endAngle) * this.nodeRadius;
-        const endY = targetY + Math.sin(endAngle) * this.nodeRadius;
-
-        // 计算拐点 - 通过y轴对称于光伏-家庭负载的拐点
-        const symmetryAxisX = (gridNode.x + homeLoadNode.x) / 2;
-        const pvHomeCornerX = centerX + cornerDistance;
-        const pvHomeCornerY = centerY + cornerDistance * 1.5; // 使水平线离x轴更远
-
-        const cornerX = 2 * symmetryAxisX - pvHomeCornerX; // 沿y轴对称
-        const cornerY = pvHomeCornerY; // y坐标保持一致
-
-        // 圆角半径 - 增大圆弧半径
-        const radius = Math.min(20, Math.min(
-          Math.abs(cornerY - startY) * 0.3,
-          Math.abs(endX - cornerX) * 0.3
-        ));
-
-        // 从电池节点右上方开始
-        ctx.moveTo(startX, startY);
-
-        // 从起点垂直向上到拐角点前
-        ctx.lineTo(startX, cornerY + radius);
-
-        // 绘制第一个圆角
-        ctx.arcTo(startX, cornerY, startX + radius, cornerY, radius);
-
-        // 水平线到家庭负载节点下方
-        const targetPointX = endX;
-        ctx.lineTo(targetPointX, cornerY);
-
-        // 垂直向上到终点
-        ctx.lineTo(endX, endY);
-      }
-      // 其他连接使用默认方式
-      else {
-        // 计算离开源节点和进入目标节点的点
-        const angle = Math.atan2(targetY - sourceY, targetX - sourceX);
-        const startX = sourceX + Math.cos(angle) * this.nodeRadius;
-        const startY = sourceY + Math.sin(angle) * this.nodeRadius;
-
-        const endAngle = Math.atan2(sourceY - targetY, sourceX - targetX);
-        const endX = targetX + Math.cos(endAngle) * this.nodeRadius;
-        const endY = targetY + Math.sin(endAngle) * this.nodeRadius;
-
-        ctx.moveTo(startX, startY);
-
-        // 如果节点是水平或垂直排列的，使用直线
-        if (Math.abs(sourceX - targetX) < 10 || Math.abs(sourceY - targetY) < 10) {
-          ctx.lineTo(endX, endY);
-        } else {
-          // 使用二次贝塞尔曲线实现圆角效果
-          const midX = (sourceX + targetX) / 2;
-          const midY = (sourceY + targetY) / 2;
-          ctx.quadraticCurveTo(midX, midY, endX, endY);
-        }
-      }
-      ctx.stroke();
-      ctx.restore();
-    } else {
-      // 处理找不到节点的情况，使用默认连接方式
-      // 计算离开源节点和进入目标节点的点
-      const angle = Math.atan2(targetY - sourceY, targetX - sourceX);
-      const startX = sourceX + Math.cos(angle) * this.nodeRadius;
-      const startY = sourceY + Math.sin(angle) * this.nodeRadius;
-
-      const endAngle = Math.atan2(sourceY - targetY, sourceX - targetX);
-      const endX = targetX + Math.cos(endAngle) * this.nodeRadius;
-      const endY = targetY + Math.sin(endAngle) * this.nodeRadius;
-
-      // 设置线条样式
-      ctx.save();
-      ctx.strokeStyle = link.color;
-      const lineWidth = Math.max(1.5, Math.min(3, this.nodeRadius / 10 * Math.min(4, link.value / 500)));
-      ctx.lineWidth = lineWidth;
-
-      ctx.beginPath();
+    // 1. 电网 -> 家庭负载 (曲线)
+    if (link.source === '电网' && link.target === '家庭负载' && gridNode && homeNode) {
+        startX = gridNode.x + radius; startY = gridNode.y; endX = homeNode.x - radius; endY = homeNode.y;
+        cp1x = startX + (endX - startX) * 0.5; cp1y = startY; cp2x = cp1x; cp2y = endY;
+        ctx.moveTo(startX, startY); ctx.bezierCurveTo(cp1x, cp1y, cp2x, cp2y, endX, endY);
+    }
+    // 2. 光伏 -> 家庭负载 (曲线 - 基准样式)
+    else if (link.source === '光伏' && link.target === '家庭负载' && solarNode && homeNode) {
+        startX = solarNode.x; startY = solarNode.y + radius; endX = homeNode.x; endY = homeNode.y - radius;
+        cp1x = startX; cp1y = startY + (endY - startY) * 0.5; cp2x = endX; cp2y = cp1y;
+        ctx.moveTo(startX, startY); ctx.bezierCurveTo(cp1x, cp1y, cp2x, cp2y, endX, endY);
+    }
+    // 3. 电池 -> 家庭负载 (曲线 - 基准样式)
+    else if (link.source === '电池' && link.target === '家庭负载' && batteryNode && homeNode) {
+        startX = batteryNode.x; startY = batteryNode.y - radius; endX = homeNode.x; endY = homeNode.y + radius;
+        cp1x = startX; cp1y = startY + (endY - startY) * 0.5; cp2x = endX; cp2y = cp1y;
+        ctx.moveTo(startX, startY); ctx.bezierCurveTo(cp1x, cp1y, cp2x, cp2y, endX, endY);
+    }
+    // 4. 家庭负载 -> 充电桩 (直线)
+    else if (link.source === '家庭负载' && link.target === '充电桩' && homeNode && chargerNode) {
+        startX = sourceX + Math.cos(angle) * radius; startY = sourceY + Math.sin(angle) * radius;
+        endX = targetX - Math.cos(angle) * radius; endY = targetY - Math.sin(angle) * radius;
+        ctx.moveTo(startX, startY); ctx.lineTo(endX, endY);
+    }
+    // 5. 家庭负载 -> 智能负载 (直线)
+    else if (link.source === '家庭负载' && link.target === '智能负载' && homeNode && smartNode) {
+        startX = sourceX + Math.cos(angle) * radius; startY = sourceY + Math.sin(angle) * radius;
+        endX = targetX - Math.cos(angle) * radius; endY = targetY - Math.sin(angle) * radius;
+        ctx.moveTo(startX, startY); ctx.lineTo(endX, endY);
+    }
+    // 6. 光伏 -> 电池 (直线)
+    else if (link.source === '光伏' && link.target === '电池' && solarNode && batteryNode) {
+        startX = sourceX + Math.cos(angle) * radius; startY = sourceY + Math.sin(angle) * radius;
+        endX = targetX - Math.cos(angle) * radius; endY = targetY - Math.sin(angle) * radius;
+        ctx.moveTo(startX, startY); ctx.lineTo(endX, endY);
+    }
+    // 7. 光伏 -> 电网 (曲线 - 对称于 PV -> Load)
+    else if (link.source === '光伏' && link.target === '电网' && solarNode && gridNode) {
+       startX = solarNode.x; startY = solarNode.y + radius;
+       endX = gridNode.x; endY = gridNode.y - radius;
+       cp1x = startX; cp1y = startY + (endY - startY) * 0.5;
+       cp2x = endX; cp2y = cp1y;
       ctx.moveTo(startX, startY);
+      ctx.bezierCurveTo(cp1x, cp1y, cp2x, cp2y, endX, endY);
+    }
+    // 8. 电池 -> 电网 (曲线 - 对称于 Battery -> Load)
+    else if (link.source === '电池' && link.target === '电网' && batteryNode && gridNode) {
+       // 对称逻辑:
+       // Bat->Load: start(Bat_x, Bat_y-r), end(Load_x, Load_y+r), cp1(Bat_x, midY), cp2(Load_x, midY)
+       // Bat->Grid: start(Bat_x, Bat_y-r), end(Grid_x, Grid_y+r), cp1(Bat_x, midY), cp2(Grid_x, midY)
+       startX = batteryNode.x; startY = batteryNode.y - radius; // 从电池上方出 (与 Bat->Load 相同)
+       endX = gridNode.x; endY = gridNode.y + radius;       // 进入电网下方 (对称 Load_y+r)
+       cp1x = startX; // 控制点1 x 与起点相同 (对称)
+       cp1y = startY + (endY - startY) * 0.5; // 控制点1 y 在新的起点和终点y的中间 (对称计算方式)
+       cp2x = endX; // 控制点2 x 与终点相同 (对称)
+       cp2y = cp1y; // 控制点2 y 与 控制点1 y 相同 (对称)
 
-      // 其他连接继续使用简单的二次贝塞尔曲线
-      const midX = (sourceX + targetX) / 2;
-      const midY = (sourceY + targetY) / 2;
+      ctx.moveTo(startX, startY);
+      ctx.bezierCurveTo(cp1x, cp1y, cp2x, cp2y, endX, endY);
+    }
+    // 9. 电网 -> 电池 (曲线 - 反向对称于 Battery -> Grid)
+    else if (link.source === '电网' && link.target === '电池' && gridNode && batteryNode) {
+        // 反向对称逻辑:
+        // Bat->Grid: start(Bat_x, Bat_y-r), end(Grid_x, Grid_y+r), cp1(Bat_x, midY), cp2(Grid_x, midY)
+        // Grid->Bat: start(Grid_x, Grid_y+r), end(Bat_x, Bat_y-r), cp1(Grid_x, midY), cp2(Bat_x, midY)
+        startX = gridNode.x; startY = gridNode.y + radius; // 从电网下方出
+        endX = batteryNode.x; endY = batteryNode.y - radius; // 进入电池上方
 
-      // 如果节点是水平或垂直排列的，使用直线
-      if (Math.abs(sourceX - targetX) < 10 || Math.abs(sourceY - targetY) < 10) {
-        ctx.lineTo(endX, endY);
-      } else {
-        // 使用二次贝塞尔曲线实现圆角效果
-        ctx.quadraticCurveTo(midX, midY, endX, endY);
-      }
-      ctx.stroke();
-      ctx.restore();
+        cp1x = startX; // 控制点1 x 与起点相同
+        cp1y = startY + (endY - startY) * 0.5; // 控制点1 y 在新的起点和终点y的中间
+        cp2x = endX; // 控制点2 x 与终点相同
+        cp2y = cp1y; // 控制点2 y 与 控制点1 y 相同
+
+      ctx.moveTo(startX, startY);
+      ctx.bezierCurveTo(cp1x, cp1y, cp2x, cp2y, endX, endY);
+    }
+    // 其他未处理的连接（默认直线）
+    else {
+        startX = sourceX + Math.cos(angle) * radius; startY = sourceY + Math.sin(angle) * radius;
+        endX = targetX - Math.cos(angle) * radius; endY = targetY - Math.sin(angle) * radius;
+        if (!isNaN(startX) && !isNaN(startY) && !isNaN(endX) && !isNaN(endY)) {
+          ctx.moveTo(startX, startY); ctx.lineTo(endX, endY);
+        }
+    }
+
+    if (!isNaN(startX) && !isNaN(startY)) {
+    ctx.stroke();
+    }
+    ctx.restore();
+  }
+
+  // 根据进度计算路径上的点 (匹配 drawLink 的直线/曲线逻辑)
+  getPointOnPath(link, progress) {
+    // --- 使用一个非常简单的日志来测试 ---
+    // console.log("!!! getPointOnPath CALLED !!!", link.source, "->", link.target);
+
+    const sourceNode = this.nodes.find(n => n.name === link.source);
+    const targetNode = this.nodes.find(n => n.name === link.target);
+
+    if (!sourceNode || !targetNode) {
+      return { x: 0, y: 0 };
+    }
+
+    const sourceX = sourceNode.x; const sourceY = sourceNode.y;
+    const targetX = targetNode.x; const targetY = targetNode.y;
+    const radius = this.nodeRadius;
+
+    const homeNode = this.nodes.find(n => n.name === '家庭负载');
+    const gridNode = this.nodes.find(n => n.name === '电网');
+    const solarNode = this.nodes.find(n => n.name === '光伏');
+    const batteryNode = this.nodes.find(n => n.name === '电池');
+
+    let startX, startY, endX, endY, cp1x, cp1y, cp2x, cp2y;
+    let pathType = 'line';
+    const angle = Math.atan2(targetY - sourceY, targetX - sourceX);
+
+    const bezierXY = (t, sx, sy, cp1x, cp1y, cp2x, cp2y, ex, ey) => {
+        const mt = 1 - t; const mt2 = mt * mt; const mt3 = mt2 * mt;
+        const t2 = t * t; const t3 = t2 * t;
+        return {
+            x: mt3 * sx + 3 * mt2 * t * cp1x + 3 * mt * t2 * cp2x + t3 * ex,
+            y: mt3 * sy + 3 * mt2 * t * cp1y + 3 * mt * t2 * cp2y + t3 * ey
+        };
+    };
+
+    // --- 根据连接类型确定路径参数 ---
+    if (link.source === '电网' && link.target === '家庭负载' && gridNode && homeNode) { pathType = 'bezier'; startX = gridNode.x + radius; startY = gridNode.y; endX = homeNode.x - radius; endY = homeNode.y; cp1x = startX + (endX - startX) * 0.5; cp1y = startY; cp2x = cp1x; cp2y = endY; }
+    else if (link.source === '光伏' && link.target === '家庭负载' && solarNode && homeNode) { pathType = 'bezier'; startX = solarNode.x; startY = solarNode.y + radius; endX = homeNode.x; endY = homeNode.y - radius; cp1x = startX; cp1y = startY + (endY - startY) * 0.5; cp2x = endX; cp2y = cp1y; }
+    else if (link.source === '电池' && link.target === '家庭负载' && batteryNode && homeNode) { pathType = 'bezier'; startX = batteryNode.x; startY = batteryNode.y - radius; endX = homeNode.x; endY = homeNode.y + radius; cp1x = startX; cp1y = startY + (endY - startY) * 0.5; cp2x = endX; cp2y = cp1y; }
+    else if (link.source === '家庭负载' && link.target === '充电桩') { pathType = 'line'; startX = sourceX + Math.cos(angle) * radius; startY = sourceY + Math.sin(angle) * radius; endX = targetX - Math.cos(angle) * radius; endY = targetY - Math.sin(angle) * radius; }
+    else if (link.source === '家庭负载' && link.target === '智能负载') { pathType = 'line'; startX = sourceX + Math.cos(angle) * radius; startY = sourceY + Math.sin(angle) * radius; endX = targetX - Math.cos(angle) * radius; endY = targetY - Math.sin(angle) * radius; }
+    else if (link.source === '光伏' && link.target === '电池') { pathType = 'line'; startX = sourceX + Math.cos(angle) * radius; startY = sourceY + Math.sin(angle) * radius; endX = targetX - Math.cos(angle) * radius; endY = targetY - Math.sin(angle) * radius; }
+    else if (link.source === '光伏' && link.target === '电网' && solarNode && gridNode) { pathType = 'bezier'; startX = solarNode.x; startY = solarNode.y + radius; endX = gridNode.x; endY = gridNode.y - radius; cp1x = startX; cp1y = startY + (endY - startY) * 0.5; cp2x = endX; cp2y = cp1y; }
+    else if (link.source === '电池' && link.target === '电网' && batteryNode && gridNode) { pathType = 'bezier'; startX = batteryNode.x; startY = batteryNode.y - radius; endX = gridNode.x; endY = gridNode.y + radius; cp1x = startX; cp1y = startY + (endY - startY) * 0.5; cp2x = endX; cp2y = cp1y; }
+    else if (link.source === '电网' && link.target === '电池' && gridNode && batteryNode) { pathType = 'bezier'; startX = gridNode.x; startY = gridNode.y + radius; endX = batteryNode.x; endY = batteryNode.y - radius; cp1x = startX; cp1y = startY + (endY - startY) * 0.5; cp2x = endX; cp2y = cp1y; }
+    else { pathType = 'line'; startX = sourceX + Math.cos(angle) * radius; startY = sourceY + Math.sin(angle) * radius; endX = targetX - Math.cos(angle) * radius; endY = targetY - Math.sin(angle) * radius; }
+
+    // --- 根据 pathType 计算最终坐标 ---
+    if (isNaN(startX) || isNaN(startY) || isNaN(endX) || isNaN(endY)) {
+        return { x: sourceX, y: sourceY };
+    }
+    if (pathType === 'bezier') {
+        if (cp1x === undefined || cp1y === undefined || cp2x === undefined || cp2y === undefined) {
+            return { x: startX + (endX - startX) * progress, y: startY + (endY - startY) * progress };
+        }
+        return bezierXY(progress, startX, startY, cp1x, cp1y, cp2x, cp2y, endX, endY);
+    } else { // 'line'
+        return { x: startX + (endX - startX) * progress, y: startY + (endY - startY) * progress };
     }
   }
 
-  drawParticle(particle) {
-    const { ctx } = this;
-    const sourceNode = this.nodes.find(n => n.name === particle.link.source);
-    const targetNode = this.nodes.find(n => n.name === particle.link.target);
+  // 更新粒子位置和状态
+  updateParticles(deltaTime) {
+    // console.log(`--- updateParticles called, deltaTime: ${deltaTime}, particle count: ${this.particles.length} ---`); // 添加日志
 
-    // 如果连接不可见或节点不存在，则不绘制粒子
-    if (!sourceNode || !targetNode || !particle.link.visible) return;
-
-    const t = particle.progress; // 粒子沿路径的进度 (0 到 1)
-
-    const path = this.calculatePathPoints(particle.link);
-    const x = this.getPointOnPath(t, path.controlPoints).x;
-    const y = this.getPointOnPath(t, path.controlPoints).y;
-
-
-
-    // 绘制粒子（如果位置有效）
-    if (x !== undefined && y !== undefined) {
-        ctx.save();
-        ctx.beginPath();
-        // 根据功率动态调整粒子大小，使其更小一些
-        const baseParticleSize = 1.5; // 基础尺寸
-        const powerFactorSize = Math.min(1.5, Math.log1p(particle.link.value / 150)); // 功率越大尺寸略微增大
-        const particleSize = baseParticleSize + powerFactorSize;
-        ctx.arc(x, y, particleSize, 0, Math.PI * 2);
-        ctx.fillStyle = particle.link.color;
-        ctx.globalAlpha = 0.8; // 设置透明度
-        ctx.fill();
-        ctx.restore();
-    } else {
-        console.warn("粒子位置计算失败，连接:", particle.link.source, "->", particle.link.target);
+    if (this.particles.length === 0) {
+        // console.warn("Particle array is empty, skipping update.");
+        return; // 如果没有粒子，直接返回
     }
-  }
-
-  updateParticles(deltaTime) { // 从 draw 循环传递 deltaTime
-    if (isNaN(deltaTime) || deltaTime <= 0) return; // 避免在第一帧或暂停时出现问题
 
     this.particles.forEach(particle => {
-      particle.progress += particle.speed * deltaTime; // 根据时间增量更新进度
-      // 当粒子完成路径后重置
-      if (particle.progress >= 1) {
-        particle.progress = 0; // 重置到起点
-        // 可选: 添加小的随机偏移以避免聚集
-        particle.progress = Math.random() * 0.05;
+      try { // 添加 try...catch 块捕获潜在错误
+      // 更新粒子进度
+          const speed = typeof particle.speed === 'number' ? particle.speed : 0;
+          const dt = typeof deltaTime === 'number' && deltaTime > 0 ? deltaTime : 16; // Use a default delta if invalid
+          particle.progress += (speed * dt) / 1000;
+
+      // 循环进度
+      if (particle.progress > 1) particle.progress -= 1;
+          if (particle.progress < 0) particle.progress += 1;
+
+      // 使用新函数计算精确位置
+          const pos = this.getPointOnPath(particle.link, particle.progress); // 调用 getPointOnPath
+      particle.x = pos.x;
+      particle.y = pos.y;
+
+      } catch (error) {
+          console.error("Error updating particle:", particle, error); // 打印错误信息
       }
     });
+  }
+
+  // 绘制单个粒子
+  drawParticle(particle) {
+    const { ctx } = this;
+    if (particle.x === undefined || particle.y === undefined || isNaN(particle.x) || isNaN(particle.y)) {
+      return;
+    }
+    ctx.save();
+    ctx.beginPath();
+    const particleRadius = typeof particle.size === 'number' && particle.size > 0 ? particle.size : 3;
+    ctx.arc(particle.x, particle.y, particleRadius, 0, Math.PI * 2);
+    ctx.fillStyle = particle.link?.color || '#ccc';
+    ctx.fill();
+    ctx.restore();
   }
 
   draw() {
@@ -586,8 +420,8 @@ class EnergyFlowCanvas {
     // 清除画布
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    // 在绘制之前更新粒子位置
-    this.updateParticles(deltaTime); // 传递 deltaTime
+    // 更新粒子位置
+    this.updateParticles(deltaTime);
 
     // 绘制连线 (移除 if(link.visible) 判断)
     this.links.forEach(link => {
@@ -595,12 +429,13 @@ class EnergyFlowCanvas {
        this.drawLink(link); // 直接绘制所有连线
     });
 
-    // 绘制粒子 (drawParticle 内部会检查 link.visible)
-    this.particles.forEach(particle => this.drawParticle(particle));
+    // 绘制粒子
+    this.particles.forEach(particle => {
+      this.drawParticle(particle);
+    });
 
     // 绘制节点
     this.nodes.forEach(node => this.drawNode(node));
-
     // 继续动画
     // 清除之前的动画帧请求
     if (this.animationFrameId) {
@@ -633,6 +468,7 @@ class EnergyFlowCanvas {
       if (flowData) {
         console.log('获取到能流图数据:', flowData);
         // 解析各项功率数据
+
         let {
           gridPower, // 电网功率
           solarPower, // 光伏功率
@@ -640,7 +476,6 @@ class EnergyFlowCanvas {
           homePower, // 智能负载功率
           batPower, // 电池功率
           chargerList, // 充电桩列表
-          solarWorkMode // 光伏工作模式
         } = flowData;
 
         // 计算充电桩总功率
@@ -654,388 +489,65 @@ class EnergyFlowCanvas {
         homePower = Number(homePower.replace('W', ''));
         gridPower = Number(gridPower.replace('W', ''));
         const totalLoadPower = loadPower + homePower + chargerPower;
-
-        // 更新流向数据，确保每个节点在同一时间只能有一个流向
-        const flows = {
-          pv_to_grid: 0,
-          pv_to_battery: 0,
-          pv_to_load: 0,
-          battery_to_grid: 0,
-          battery_to_load: 0,
-          grid_to_battery: 0,
-          grid_to_load: 0
-        };
-
-        // 获取电池和电网的工作模式
-        const { batWorkMode, gridWorkMode } = flowData;
-
-        if (
-          typeof batWorkMode === 'number' &&
-          typeof gridWorkMode === 'number' &&
-          typeof solarWorkMode === 'number'
-        ) {
-          // 1. 光伏发电模式
-          if (solarWorkMode !== 0) {
-            // 光伏优先供负载
-            flows.pv_to_load = Math.min(solarPower, totalLoadPower);
-
-            // 光伏多余部分
-            const solarRemain = solarPower - flows.pv_to_load;
-
-            // 光伏多余部分优先充电池（电池允许充电时）
-            if (batWorkMode === 1 && solarRemain > 0 && batPower > 0) {
-              flows.pv_to_battery = Math.min(solarRemain, batPower);
-            }
-
-            // 光伏剩余再送电网（电网允许卖电时）
-            const solarRemain2 = solarRemain - flows.pv_to_battery;
-            if (solarRemain2 > 0 && gridWorkMode === -1) {
-              flows.pv_to_grid = solarRemain2;
-            }
-          }
-
-          // 2. 电池放电模式
-          if (batWorkMode === -1) {
-            // 电池优先供负载
-            flows.battery_to_load = Math.min(batPower, totalLoadPower - flows.pv_to_load);
-
-            // 电池多余部分送电网（电网允许卖电时）
-            const batteryRemain = batPower - flows.battery_to_load;
-            if (batteryRemain > 0 && gridWorkMode === -1) {
-              flows.battery_to_grid = Math.min(batteryRemain, Math.abs(gridPower));
-            }
-          }
-
-          // 3. 电网供电模式
-          if (gridWorkMode === 1) {
-            // 电网补充负载
-            const remainLoad = totalLoadPower - flows.pv_to_load - flows.battery_to_load;
-            if (remainLoad > 0) {
-              flows.grid_to_load = remainLoad;
-            }
-            // 电网给电池充电（电池允许充电时）
-            if (batWorkMode === 1 && batPower > flows.pv_to_battery) {
-              flows.grid_to_battery = batPower - flows.pv_to_battery;
-            }
-          }
-        } else {
-          // workmode缺失时，按power兜底
-          if (batPower > 0) {
-            flows.battery_to_load = Math.min(batPower, totalLoadPower);
-          }
-          if (solarPower > 0) {
-            flows.pv_to_load = Math.min(solarPower, totalLoadPower);
-          }
-        }
-
-        // 更新节点显示的功率值
-        this.nodes.forEach(node => {
-          switch (node.name) {
-            case '电网':
-              node.value = `${gridPower} W`;
-              break;
-            case '光伏':
-              node.value = `${solarPower} W`;
-              break;
-            case '电池':
-              node.value = `${batPower} W`;
-              break;
-            case '家庭负载':
-              node.value = `${totalLoadPower} W`;
-              break;
-            case '充电桩':
-              node.value = `${chargerPower} W`;
-              break;
-            case '智能负载':
-              node.value = `${loadPower} W`;
-              break;
-          }
-        });
-
-        // 更新连接的流向值
-        this.updateLinks(flows);
-        // 重新初始化粒子系统
-        this.initParticles();
       }
-
-      // 获取电池状态
-      // const batteryStatus = await getStatusNow();
-      // if (batteryStatus) {
-      //   console.log('获取到曲线图数据:', batteryStatus);
-      //   // this.updateBatteryStatus(batteryStatus);
-      // }
+      this.initParticles();
     } catch (error) {
       console.error('获取数据失败:', error);
     }
   }
+  initParticles() {
+    console.log("--- initParticles called ---"); // 添加日志
+    this.particles = []; // 清空粒子数组
+    console.log("Links to initialize particles for:", this.links); // 打印用于生成粒子的 links
 
-  // 更新流向数据
-  updateFlowData(data) {
-    // 适配不同格式的返回数据
-    const adaptedData = this.adaptFlowData(data);
-
-    // 存储适配后的数据
-    this.flowData = adaptedData;
-
-    // 根据适配后的数据更新连接
-    this.updateLinks(adaptedData);
-
-    // 重新初始化粒子系统
-    this.initParticles();
-  }
-
-  // 适配不同格式的流向数据
-  adaptFlowData(data) {
-    // 默认数据结构
-    const defaultData = {
-      pv_to_grid: 0,
-      pv_to_battery: 0,
-      pv_to_load: 0,
-      battery_to_grid: 0,
-      battery_to_load: 0,
-      grid_to_battery: 0,
-      grid_to_load: 0
-    };
-
-    // 如果数据为空或不是对象，返回默认值
-    if (!data || typeof data !== 'object') {
-      console.warn('流向数据格式不正确，使用默认值');
-      return defaultData;
+    if (!this.links || this.links.length === 0) {
+        console.warn("No links available to initialize particles.");
+        return;
     }
-
-    // 尝试适配不同格式的数据
-    const adapted = { ...defaultData };
-
-    // 遍历所有可能的键名映射
-    const keyMappings = {
-      // 标准键名
-      pv_to_grid: ['pv_to_grid', 'pvToGrid', 'pv2grid', 'solar_to_grid'],
-      pv_to_battery: ['pv_to_battery', 'pvToBattery', 'pv2batt', 'solar_to_battery'],
-      pv_to_load: ['pv_to_load', 'pvToLoad', 'pv2load', 'solar_to_load'],
-      battery_to_grid: ['battery_to_grid', 'batteryToGrid', 'batt2grid'],
-      battery_to_load: ['battery_to_load', 'batteryToLoad', 'batt2load'],
-      grid_to_battery: ['grid_to_battery', 'gridToBattery', 'grid2batt'],
-      grid_to_load: ['grid_to_load', 'gridToLoad', 'grid2load']
-    };
-
-    // 对每个标准键，尝试从数据中找到匹配的键
-    Object.entries(keyMappings).forEach(([standardKey, possibleKeys]) => {
-      for (const key of possibleKeys) {
-        if (key in data && data[key] !== undefined) {
-          // 找到匹配的键，将值转换为数字并存储
-          adapted[standardKey] = Number(data[key]);
-          break;
-        }
-      }
-    });
-
-    // 处理可能的嵌套结构
-    if (data.flows && typeof data.flows === 'object') {
-      return this.adaptFlowData(data.flows);
-    }
-
-    // 处理可能的数组结构
-    if (Array.isArray(data)) {
-      data.forEach(item => {
-        if (item.source && item.target && item.value !== undefined) {
-          // 从数组元素中提取流向数据
-          const source = String(item.source).toLowerCase();
-          const target = String(item.target).toLowerCase();
-          const value = Number(item.value);
-
-          if (source.includes('pv') || source.includes('solar')) {
-            if (target.includes('grid')) adapted.pv_to_grid = value;
-            else if (target.includes('batt')) adapted.pv_to_battery = value;
-            else if (target.includes('load')) adapted.pv_to_load = value;
-          } else if (source.includes('batt')) {
-            if (target.includes('grid')) adapted.battery_to_grid = value;
-            else if (target.includes('load')) adapted.battery_to_load = value;
-          } else if (source.includes('grid')) {
-            if (target.includes('batt')) adapted.grid_to_battery = value;
-            else if (target.includes('load')) adapted.grid_to_load = value;
-          }
-        }
-      });
-    }
-
-    console.log('适配后的流向数据:', adapted);
-    return adapted;
-  }
-
-  // 更新连接数据
-  updateLinks(flowData) {
-    if (!this.links || !Array.isArray(this.links)) return;
 
     this.links.forEach(link => {
-      let linkValue = 0;
-      // 根据连接的源和目标节点设置value值
-      if (link.source === '光伏' && link.target === '电网') {
-        linkValue = flowData.pv_to_grid;
-      } else if (link.source === '光伏' && link.target === '电池') {
-        linkValue = flowData.pv_to_battery;
-      } else if (link.source === '光伏' && link.target === '家庭负载') {
-        linkValue = flowData.pv_to_load;
-      } else if (link.source === '电池' && link.target === '电网') {
-        linkValue = flowData.battery_to_grid;
-      } else if (link.source === '电池' && link.target === '家庭负载') {
-        linkValue = flowData.battery_to_load;
-      } else if (link.source === '电网' && link.target === '电池') {
-        linkValue = flowData.grid_to_battery;
-      } else if (link.source === '电网' && link.target === '家庭负载') {
-        linkValue = flowData.grid_to_load;
+      // 检查 link 和 link.value 是否有效
+      if (!link || typeof link.value !== 'number') {
+          console.warn("Skipping particle initialization for invalid link:", link);
+          return; // 跳过无效的 link
       }
-      // 可以添加更多连接的处理，例如到充电桩和智能负载
-      // else if (link.source === '家庭负载' && link.target === '充电桩') { ... }
-      // else if (link.source === '家庭负载' && link.target === '智能负载') { ... }
 
-      link.value = Math.abs(linkValue); // 使用绝对值，方向由流向决定
-
-      // 根据流向值调整粒子可见性
-      link.visible = link.value > 0;
-    });
-  }
-
-  // 更新电池状态
-  updateBatteryStatus(data) {
-    // 适配不同格式的返回数据
-    const batteryData = this.adaptBatteryData(data);
-
-    // 更新电池节点的信息
-    const batteryNode = this.nodes.find(n => n.name === '电池');
-    if (batteryNode) {
-      batteryNode.value = `${batteryData.status}\n${batteryData.percentage}%\n${batteryData.power}W`;
-      batteryNode.rawData = batteryData;
-    }
-  }
-
-  destroy() {
-    if (this.animationFrameId) {
-      cancelAnimationFrame(this.animationFrameId);
-    }
-    if (this.dataRefreshInterval) {
-      clearInterval(this.dataRefreshInterval);
-    }
-    // 停止会话续期
-    stopSessionRenewal();
-    window.removeEventListener('resize', this.resize);
-    this.container.removeChild(this.canvas);
-  }
-
-  // --- 辅助函数 ---
-  // 获取直线段上的点
-  getPointOnLine(x1, y1, x2, y2, t) {
-    return {
-        x: x1 + (x2 - x1) * t,
-        y: y1 + (y2 - y1) * t
-    };
-  }
-
-  // 获取二次贝塞尔曲线上的点
-  calculatePathPoints(link) {
     const sourceNode = this.nodes.find(n => n.name === link.source);
     const targetNode = this.nodes.find(n => n.name === link.target);
-    const nodes = this.nodes;
-    const pvNode = nodes.find(n => n.name === '光伏');
-    const batteryNode = nodes.find(n => n.name === '电池');
-    const gridNode = nodes.find(n => n.name === '电网');
-    const homeLoadNode = nodes.find(n => n.name === '家庭负载');
-
-    const angle = Math.atan2(targetNode.y - sourceNode.y, targetNode.x - sourceNode.x);
-    const start = {
-      x: sourceNode.x + Math.cos(angle) * this.nodeRadius,
-      y: sourceNode.y + Math.sin(angle) * this.nodeRadius
-    };
-    const endAngle = Math.atan2(sourceNode.y - targetNode.y, sourceNode.x - targetNode.x);
-    const end = {
-      x: targetNode.x + Math.cos(endAngle) * this.nodeRadius,
-      y: targetNode.y + Math.sin(endAngle) * this.nodeRadius
-    };
-
-    let controlPoints = [];
-    const linkType = `${link.source}-${link.target}`;
-
-    if (pvNode && batteryNode && gridNode && homeLoadNode) {
-      const centerX = (pvNode.x + batteryNode.x) / 2;
-      const centerY = (gridNode.y + homeLoadNode.y) / 2;
-      const cornerDistance = Math.sqrt(this.nodeRadius) * 2;
-
-      switch(linkType) {
-        case '光伏-家庭负载':
-          controlPoints = [
-            { x: start.x, y: start.y },
-            { x: start.x, y: centerY - cornerDistance * 1.5 },
-            { x: end.x, y: centerY - cornerDistance * 1.5 },
-            { x: end.x, y: end.y }
-          ];
-          break;
-        case '光伏-电网':
-          controlPoints = [
-            { x: start.x, y: start.y },
-            { x: start.x, y: centerY - cornerDistance * 1.5 },
-            { x: end.x, y: centerY - cornerDistance * 1.5 },
-            { x: end.x, y: end.y }
-          ];
-          break;
-        case '电池-电网':
-          controlPoints = [
-            { x: start.x, y: start.y },
-            { x: start.x, y: centerY + cornerDistance * 1.5 },
-            { x: end.x, y: centerY + cornerDistance * 1.5 },
-            { x: end.x, y: end.y }
-          ];
-          break;
-        case '电池-家庭负载':
-          controlPoints = [
-            { x: start.x, y: start.y },
-            { x: start.x, y: centerY + cornerDistance * 1.5 },
-            { x: end.x, y: centerY + cornerDistance * 1.5 },
-            { x: end.x, y: end.y }
-          ];
-          break;
-        default:
-          const midX = (start.x + end.x) / 2;
-          const midY = (start.y + end.y) / 2;
-          controlPoints = [
-            { x: start.x, y: start.y },
-            { x: midX, y: midY },
-            { x: end.x, y: end.y }
-          ];
+      if (!sourceNode || !targetNode) {
+          console.warn(`Nodes not found for link ${link.source}->${link.target}, skipping particles.`);
+          return; // 如果找不到节点，也跳过
       }
-    }
 
-    return { controlPoints };
-  }
+      // 根据功率绝对值决定粒子数量，确保至少有1个粒子（如果功率非0）
+       const powerAbs = Math.abs(link.value);
+       const particleCount = powerAbs > 1 ? Math.min(15, Math.max(1, Math.floor(powerAbs / 100))) : 0; // 调整数量计算逻辑，功率低则少，为0则无
+       // const particleCount = Math.min(10, Math.max(3, Math.abs(link.value) / 200)); // 原来的计算方式
 
-  getPointOnPath(t, controlPoints) {
-    const n = controlPoints.length - 1;
-    const segment = t * n;
-    const index = Math.min(Math.floor(segment), n - 1);
-    const localT = segment - index;
-    
-    const p0 = controlPoints[index];
-    const p1 = controlPoints[index + 1];
-    
-    return {
-      x: p0.x + (p1.x - p0.x) * localT,
-      y: p0.y + (p1.y - p0.y) * localT
-    };
-  }
+       if (particleCount === 0) {
+           // console.log(`Skipping particles for link ${link.source}->${link.target} due to low/zero power (${link.value})`);
+           return;
+       }
 
-  // 计算两点间距离
-  distance(x1, y1, x2, y2) {
-    return Math.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2);
-  }
-  // --- 结束辅助函数 ---
 
-  /**
-   * 设置自定义控制点，用于优化曲线路径
-   * @param {Object} controlPoints - 控制点配置对象，键为"source-target"格式
-   */
-  setCustomControlPoints(controlPoints) {
-    this.customControlPoints = controlPoints || {};
-    // 重绘图表以应用新的控制点
-    this.draw();
+      // 粒子速度和方向
+      const direction = link.value >= 0 ? 1 : -1; // 正值: source->target, 负值: target->source (虽然动画只看方向)
+      // 基础速度，可根据功率调整，确保非零
+      const baseSpeed = 0.05 + Math.min(0.15, powerAbs / 5000); // 稍微加速
+
+      console.log(`Initializing ${particleCount} particles for ${link.source} -> ${link.target} (value: ${link.value})`); // 打印粒子创建信息
+
+      for (let i = 0; i < particleCount; i++) {
+        this.particles.push({
+          link: link, // 引用 link 对象
+          progress: Math.random(), // 随机初始位置
+          speed: baseSpeed * direction, // 基础速度 * 方向
+          size: 2 + Math.random() * 1.5, // 随机大小 (略微减小)
+           // x, y 将在 updateParticles 中计算
+        });
+      }
+    });
+    console.log(`--- initParticles finished. Total particles: ${this.particles.length} ---`); // 结束日志
   }
 }
-
 export default EnergyFlowCanvas;
