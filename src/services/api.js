@@ -222,14 +222,13 @@ export const stopSessionRenewal = () => {
 
 
 // 获取能源流向数据   主页数据
-export const getEnergyFlowData = async (plantId = 4171) => {
+export const getEnergyFlowData = async (plantId = 1102) => {
   try {
     // 使用params方式传递参数
-    const response = await api.post('/energy/getHomeCountData', null, {
-      params: { plantId }
-    });
     // console.log('能源流向数据:', response);
-    return response;
+    return await api.post('/energy/getHomeCountData', null, {
+      params: {plantId}
+    });
   } catch (error) {
     console.error('获取能源流向数据失败:', error);
     throw error;
@@ -237,7 +236,7 @@ export const getEnergyFlowData = async (plantId = 4171) => {
 };
 
 // 获取功率数据 渲染功率曲线图
-export const getStatusNow = async (plantId = 4171, deviceSn = '') => {
+export const getStatusNow = async (plantId = 1102, deviceSn = '') => {
   try {
     //当日 yyyy-MM-dd
     const time = new Date().toISOString().split('T')[0];

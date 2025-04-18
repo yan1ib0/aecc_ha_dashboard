@@ -115,7 +115,7 @@ const getOption = () => ({
         }
       },
       {
-        name: '智能负载',
+        name: '负载',
         symbolSize: nodeSize,
         symbol: `image://${localIcons.smart}`,
         itemStyle: { color: '#FF5722' },

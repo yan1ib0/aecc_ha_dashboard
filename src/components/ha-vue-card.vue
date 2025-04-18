@@ -17,7 +17,7 @@
       </div>
 
       <!-- 统计图 -->
-      <div class="chart-container" style="padding-bottom: 80% !important;">
+      <div class="chart-container" style="padding-bottom: 5% !important;">
         <div ref="statsChart" class="chart"></div>
       </div>
 
@@ -63,22 +63,20 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onUpdated, onUnmounted, onBeforeMount, onBeforeUpdate, onBeforeUnmount, nextTick } from 'vue';
+import {nextTick, onBeforeMount, onBeforeUnmount, onBeforeUpdate, onMounted, onUpdated, ref} from 'vue';
 import * as echarts from 'echarts';
 import '@mdi/font/css/materialdesignicons.css';
 import EnergyFlowCanvas from './energy-flow-canvas';
-import { getPlantVos, getDeviceAllListByPlantId } from '../services/api';
+import {getPlantVos} from '../services/api';
 
 onBeforeMount(() => {
   console.log('[ha-vue-card] 组件即将挂载');
+  // 获取电站列表
+  fetchPlantList();
 });
 
 onMounted(() => {
-  // 启动3秒定时器模拟数据更新
-  const simulationTimer = setInterval(updateCharts, 15000);
-  onUnmounted(() => clearInterval(simulationTimer));
-
-  console.log('[ha-vue-card] 组件已挂载');
+  // console.log('[ha-vue-card] 组件已挂载');
   console.log('[ha-vue-card] hass对象:', props.hass);
   console.log('[ha-vue-card] config对象:', props.config);
   // 输出所有实体信息
@@ -90,19 +88,22 @@ onMounted(() => {
     })));
   }
 
-  // 获取电站列表
-  fetchPlantList();
+  // 修改初始化顺序，确保DOM完全渲染
+  nextTick(() => {
+    initCharts();
+    updateEntityGroups();
 
-  initCharts();
-  updateEntityGroups();
+    // 添加窗口大小变化监听
+    window.addEventListener('resize', handleResize);
 
-  // 添加窗口大小变化监听
-  window.addEventListener('resize', handleResize);
-
-  // 设置定时器，每分钟更新设备信息
-  startDeviceUpdateTimer();
+  });
 });
-
+const onPlantChange =() => {
+  // 处理电站选择变化
+  console.log('[ha-vue-card] 电站选择变化:', selectedPlantId.value);
+  // 更新实体数据
+  updateEntityGroups();
+};
 onBeforeUpdate(() => {
   console.log('[ha-vue-card] 组件即将更新');
 });
@@ -113,8 +114,44 @@ onUpdated(() => {
 
 onBeforeUnmount(() => {
   console.log('[ha-vue-card] 组件即将卸载');
+  // 释放图表实例
+  if (statChart) {
+    statChart.dispose();
+  }
+  // 移除窗口大小变化监听
+  window.removeEventListener('resize', handleResize);
 });
 
+const fetchPlantList = async () => {
+  try {
+    console.log('[ha-vue-card] 正在获取电站列表...');
+    // 等待异步调用完成并获取结果
+    const response = await getPlantVos();
+
+    // API 返回的电站列表可能在 response 的某个属性中
+    // 根据 API 实际返回结构进行调整
+    if (response && Array.isArray(response)) {
+      plantList.value = response;
+    } else if (response && Array.isArray(response.data)) {
+      plantList.value = response.data;
+    } else {
+      console.error('[ha-vue-card] 电站数据格式不正确:', response);
+      plantList.value = [];
+    }
+
+    // 设置默认选中的电站
+    if (plantList.value.length > 0) {
+      selectedPlantId.value = plantList.value[0].id;
+      console.log('[ha-vue-card] 默认选中电站:', selectedPlantId.value);
+
+      // 选中电站后更新图表数据
+      updateCharts();
+    }
+  } catch (error) {
+    console.error('[ha-vue-card] 获取电站列表失败:', error);
+    plantList.value = [];
+  }
+};
 const props = defineProps({
   hass: {
     type: Object,
@@ -143,8 +180,6 @@ const statsChart = ref(null);
 // 电站相关数据
 const plantList = ref([]);
 const selectedPlantId = ref('');
-const currentDeviceList = ref([]);
-let deviceUpdateTimer = null;
 const entityGroups = ref([
   {
     name: '传感器组',
@@ -228,7 +263,17 @@ const initCharts = () => {
 
   // 初始化统计图
   if (statsChart.value) {
-    statChart = echarts.init(statsChart.value);
+    // 确保统计图容器也设置了正确的尺寸
+    const containerWidth = statsChart.value.clientWidth;
+    const containerHeight = containerWidth * 0.8; // 使用80%的宽高比
+    statsChart.value.style.height = `${containerHeight}px`;
+    
+    // 使用nextTick确保DOM渲染完成后再初始化ECharts
+    nextTick(() => {
+      statChart = echarts.init(statsChart.value);
+      // 初始化后立即更新图表数据
+      updateCharts();
+    });
   }
 
   // 初始化后立即更新数据
@@ -249,69 +294,22 @@ const handleResize = () => {
     // energyChart.resize() 将读取容器宽度，并内部计算 2:3 的高度
     energyChart.resize();
   }
-  if (statChart) {
-    statChart.resize();
+  if (statChart && statsChart.value) {
+    // 重新计算并设置统计图容器高度
+    const containerWidth = statsChart.value.clientWidth;
+    const containerHeight = containerWidth * 0.8;
+    statsChart.value.style.height = `${containerHeight}px`;
+    
+    // 调整ECharts实例大小
+    nextTick(() => {
+      statChart.resize();
+    });
   }
-};
-
-// 获取电站列表
-const fetchPlantList = async () => {
-  try {
-    const response = await getPlantVos();
-    plantList.value = response;
-    // 如果有电站数据，默认选择第一个
-    if (plantList.value.length > 0 && !selectedPlantId.value) {
-      selectedPlantId.value = plantList.value[0].id;
-      // 获取选中电站的设备列表
-      fetchDeviceList(selectedPlantId.value);
-    }
-  } catch (error) {
-    console.error('[ha-vue-card] 获取电站列表异常:', error);
-  }
-};
-
-// 获取设备列表
-const fetchDeviceList = async (plantId) => {
-  if (!plantId) return;
-
-  try {
-    const response = await getDeviceAllListByPlantId(plantId);
-    // 缓存当前电站的设备列表
-    currentDeviceList.value = response;
-    console.log('[ha-vue-card] 当前电站设备列表:', currentDeviceList.value);
-    // 更新图表数据
-    // updateCharts();
-  } catch (error) {
-    console.error('[ha-vue-card] 获取设备列表异常:', error);
-  }
-};
-
-// 电站选择变化处理
-const onPlantChange = () => {
-  console.log('[ha-vue-card] 选择电站变更为:', selectedPlantId.value);
-  // 获取选中电站的设备列表
-  fetchDeviceList(selectedPlantId.value);
-};
-
-// 启动设备信息更新定时器
-const startDeviceUpdateTimer = () => {
-  // 清除已存在的定时器
-  if (deviceUpdateTimer) {
-    clearInterval(deviceUpdateTimer);
-  }
-
-  // 每分钟更新一次设备信息
-  deviceUpdateTimer = setInterval(() => {
-    if (selectedPlantId.value) {
-      console.log('[ha-vue-card] 定时更新设备信息');
-      fetchDeviceList(selectedPlantId.value);
-    }
-  }, 60 * 1000); // 60秒 = 1分钟
 };
 
 const updateCharts = () => {
   // 动态数据生成方法 (暂时注释掉，使用下面的模拟数据)
-  
+
 
   // 更新能流图
   if (energyChart && energyFlowChart.value) {
@@ -323,10 +321,10 @@ const updateCharts = () => {
         batPower: 800,     // 模拟电池放电 800W (如果为负，则是充电)
         loadPower: 1000,    // 模拟家庭基础负载 1000W
         chargerPower: 700, // 模拟充电桩功率 700W
-        smartPower: 600    // 模拟智能负载功率 600W
+        smartPower: 600    // 模拟负载功率 600W
     };
 
-    
+
     let gridPower = simulatedData.gridPower;
     let solarPower = simulatedData.solarPower;
     let batPower = simulatedData.batPower;
@@ -349,12 +347,12 @@ const updateCharts = () => {
 
     // 节点位置比例 (应适用于 2:3 的布局)
     const positionRatios = {
-       'grid': [0.15, 0.4],
-       'solar': [0.5, 0.1], // 靠近顶部 (在 2:3 空间内)
-       'battery': [0.5, 0.7], // 靠近底部 (在 2:3 空间内)
-       'home': [0.85, 0.4],
-       'charger': [0.85, 0.1], // 稍微调整以适应 2:3
-       'smart': [0.85, 0.7]  // 稍微调整以适应 2:3
+      'grid': [0.15, 0.42],
+      'solar': [0.5, 0.1], // 靠近顶部 (在 2:3 空间内)
+      'battery': [0.5, 0.76], // 靠近底部 (在 2:3 空间内)
+      'home': [0.85, 0.42],
+      'charger': [0.85, 0.1], // 稍微调整以适应 2:3
+      'smart': [0.85, 0.76]  // 稍微调整以适应 2:3
     };
 
     // 根据名称获取位置
@@ -365,7 +363,7 @@ const updateCharts = () => {
        else if (name === '电池') key = 'battery';
        else if (name === '家庭负载') key = 'home';
        else if (name === '充电桩') key = 'charger';
-       else if (name === '智能负载') key = 'smart';
+       else if (name === '负载') key = 'smart';
        else key = name.toLowerCase();
       const ratio = positionRatios[key];
       return ratio ? calculatePosition(ratio[0], ratio[1]) : calculatePosition(0.5, 0.5);
@@ -375,6 +373,7 @@ const updateCharts = () => {
     const nodes = [
        {
         name: '电网',
+         power: gridPower,
         value: `${gridPower.toFixed(1)} W`,
         ...getPositionByName('电网'),
         color: '#673AB7', // 紫色
@@ -384,6 +383,8 @@ const updateCharts = () => {
       },
       {
         name: '光伏',
+        power: solarPower,
+         // 只显示光伏功率
         value: `${solarPower.toFixed(1)} W`,
         ...getPositionByName('光伏'),
         color: '#FF9800', // 橙色
@@ -392,6 +393,7 @@ const updateCharts = () => {
       },
       {
         name: '电池',
+        power: batPower,
         value: `${batPower > 0 ? `放电: ${batPower.toFixed(1)} W` : `充电: ${Math.abs(batPower).toFixed(1)} W`}`,
         ...getPositionByName('电池'),
         color: '#00BCD4', // 青色
@@ -401,7 +403,7 @@ const updateCharts = () => {
       },
       {
         name: '家庭负载',
-         // value: `${loadPower.toFixed(1)} W\n总计: ${totalHomeLoad.toFixed(1)} W`,
+        power: totalHomeLoad,
          value: `总计: ${totalHomeLoad.toFixed(1)} W`, // 只显示总负载功率
         ...getPositionByName('家庭负载'),
         // color: '#F44336', // 改为红色，表示消耗
@@ -411,24 +413,27 @@ const updateCharts = () => {
       },
       {
         name: '充电桩',
+        power: chargerPower,
+         // 只显示充电桩功率
         value: `${chargerPower.toFixed(1)} W`,
         ...getPositionByName('充电桩'),
         color: '#4CAF50', // 绿色
         icon: 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCI+PHBhdGggZD0iTTEyIDE4SDZWMmgxNHYxNmgtOHptMi01aDJ2LTJoMlY5aC0yVjdoLTJ2MmgtdmwtNC45IDloNi45eiIgZmlsbD0iIzRDQUY1MCIvPjwvc3ZnPg==',
-        workMode: -1 // 负载总是输入
+        workMode: chargerPower>0?-1:0 // 负载总是输入
       },
       {
-        name: '智能负载',
+        name: '负载',
+        power: smartPower,
+         // 只显示负载功率
         value: `${smartPower.toFixed(1)} W`,
-        ...getPositionByName('智能负载'),
+        ...getPositionByName('负载'),
         color: '#FF5722', // 红色
         icon: 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCI+PHBhdGggZD0iTTUgM3YxNmgxNlYzSDV6bTE0IDE0SDdWNWgxMnYxMnptLTctMWgyek0xNSA4aDJ2OGgtMlY4ek0xMSA4aDJ2M2gtMnYtM3ptMCA1aDJ2M2gtMnYtM3pNNyA4aDJ2MkgzVjhoNHY1eiIgZmlsbD0iI0ZGNTcyMiIvPjwvc3ZnPg==',
-        workMode: -1 // 负载总是输入
+        workMode: smartPower>0?-1:0, // 负载总是输入
       }
     ];
 
     // --- 创建包含所有路径的静态 links 数组 (用于测试) ---
-    // value 为正表示从 source 到 target，为负表示从 target 到 source (虽然 canvas 内部会处理绝对值，但符号可用于逻辑判断)
     // 颜色根据能量源确定
     const links = [
       // 从光伏出发 (橙色)
@@ -448,7 +453,7 @@ const updateCharts = () => {
 
       // 从家庭负载出发 (到子负载，颜色匹配子负载)
       { source: '家庭负载', target: '充电桩', value: chargerPower, color: '#4CAF50' }, // 直线 (绿色)
-      { source: '家庭负载', target: '智能负载', value: smartPower, color: '#FF5722' }  // 直线 (红色)
+      { source: '家庭负载', target: '负载', value: smartPower, color: '#FF5722' }  // 直线 (红色)
     ].filter(link => link.value !== 0); // 过滤掉 value 为 0 的连接 (虽然这里都是非零)
 
     console.log("Using Simulated Links:", links); // 打印最终使用的 links
@@ -457,30 +462,53 @@ const updateCharts = () => {
     energyChart.setData(nodes, links);
   }
 
-  // 更新统计图 (保持不变)
+  // 更新统计图
   if (statChart) {
-    // ... (统计图更新逻辑) ...
-    const timeCategories = ['00:00', '03:00', '06:00', '09:00', '12:00', '15:00', '18:00', '21:00'];
-     const mockData = { /* ... 保持不变 ... */
-       battery: [1200, 1800, 2200, 2500, 2000, 1500, 1000, 800],
-      solar: [0, 500, 2000, 3500, 3500, 2500, 2000, 500],
-      grid: [1500, 1200, 800, 500, 700, 800, 1200, 1800],
-      load: [2000, 2500, 2800, 3000, 3200, 3000, 2500, 2000]
-     };
-    statChart.setOption({ /* ... 保持不变 ... */
-      title: { text: '功率曲线', left: 'center', top: 0, textStyle: { fontSize: 16 } },
-      tooltip: { trigger: 'axis', formatter: p => p.map(i => `${i.seriesName}: ${i.value} W`).join('<br/>') },
-      legend: { data: ['电池功率', '光伏功率', '电网功率', '负载功率'], bottom: 0, itemWidth: 15, itemHeight: 10, textStyle: { fontSize: 12 } },
-      grid: { left: '3%', right: '4%', bottom: '15%', top: '15%', containLabel: true },
-      xAxis: { type: 'category', data: timeCategories, axisLabel: { interval: 0, rotate: 30, fontSize: 10 } },
-      yAxis: { type: 'value', name: '功率 (W)', nameTextStyle: { fontSize: 12 }, axisLabel: { fontSize: 10 } },
-      series: [
-        { name: '电池功率', type: 'line', data: mockData.battery, smooth: true, symbol: 'circle', symbolSize: 8, itemStyle: { color: '#00BCD4' }, lineStyle: { width: 3, color: '#00BCD4' } }, // 颜色改为青色
-        { name: '光伏功率', type: 'line', data: mockData.solar, smooth: true, symbol: 'circle', symbolSize: 8, itemStyle: { color: '#FF9800' }, lineStyle: { width: 3, color: '#FF9800' } },
-        { name: '电网功率', type: 'line', data: mockData.grid, smooth: true, symbol: 'circle', symbolSize: 8, itemStyle: { color: '#673AB7' }, lineStyle: { width: 3, color: '#673AB7' } }, // 颜色改为紫色
-        { name: '负载功率', type: 'line', data: mockData.load, smooth: true, symbol: 'circle', symbolSize: 8, itemStyle: { color: '#F44336' }, lineStyle: { width: 3, color: '#F44336' } }  // 负载功率用红色
-      ]
-    });
+    // 确保图表实例存在
+    if (!statChart._disposed) {
+      const timeCategories = ['00:00', '03:00', '06:00', '09:00', '12:00', '15:00', '18:00', '21:00'];
+      const mockData = {
+        battery: [1200, 1800, 2200, 2500, 2000, 1500, 1000, 800],
+        solar: [0, 500, 2000, 3500, 3500, 2500, 2000, 500],
+        grid: [1500, 1200, 800, 500, 700, 800, 1200, 1800],
+        load: [2000, 2500, 2800, 3000, 3200, 3000, 2500, 2000]
+      };
+
+      // 使用nextTick确保DOM已更新
+      nextTick(() => {
+        try {
+          statChart.setOption({
+            title: { text: '功率曲线', left: 'center', top: 0, textStyle: { fontSize: 16 } },
+            tooltip: { trigger: 'axis', formatter: p => p.map(i => `${i.seriesName}: ${i.value} W`).join('<br/>') },
+            legend: { data: ['电池功率', '光伏功率', '电网功率', '负载功率'], bottom: 0, itemWidth: 15, itemHeight: 10, textStyle: { fontSize: 12 } },
+            grid: { left: '3%', right: '4%', bottom: '15%', top: '15%', containLabel: true },
+            xAxis: { type: 'category', data: timeCategories, axisLabel: { interval: 0, rotate: 30, fontSize: 10 } },
+            yAxis: { type: 'value', name: '功率 (W)', nameTextStyle: { fontSize: 12 }, axisLabel: { fontSize: 10 } },
+            series: [
+              { name: '电池功率', type: 'line', data: mockData.battery, smooth: true, symbol: 'circle', symbolSize: 8, itemStyle: { color: '#00BCD4' }, lineStyle: { width: 3, color: '#00BCD4' } },
+              { name: '光伏功率', type: 'line', data: mockData.solar, smooth: true, symbol: 'circle', symbolSize: 8, itemStyle: { color: '#FF9800' }, lineStyle: { width: 3, color: '#FF9800' } },
+              { name: '电网功率', type: 'line', data: mockData.grid, smooth: true, symbol: 'circle', symbolSize: 8, itemStyle: { color: '#673AB7' }, lineStyle: { width: 3, color: '#673AB7' } },
+              { name: '负载功率', type: 'line', data: mockData.load, smooth: true, symbol: 'circle', symbolSize: 8, itemStyle: { color: '#F44336' }, lineStyle: { width: 3, color: '#F44336' } }
+            ]
+          });
+          console.log("[ha-vue-card] 统计图更新成功");
+        } catch (error) {
+          console.error("[ha-vue-card] 统计图更新失败:", error);
+        }
+      });
+    } else {
+      console.warn("[ha-vue-card] 统计图实例已销毁，尝试重新初始化");
+      // 尝试重新初始化
+      if (statsChart.value) {
+        statChart = echarts.init(statsChart.value);
+      }
+    }
+  } else {
+    console.warn("[ha-vue-card] 统计图实例不存在");
+    // 检查容器是否存在，尝试初始化
+    if (statsChart.value) {
+      statChart = echarts.init(statsChart.value);
+    }
   }
 };
 
@@ -565,138 +593,6 @@ const getEntityIcon = (entityId) => {
     case 'climate': return 'mdi-thermostat';
     default: return 'mdi-help-circle';
   }
-};
-
-const updateName = () => {
-  console.log('[ha-vue-card] 更新名称');
-  name.value = 'New Name';
-};
-
-const updateEnergyFlowData = async () => {
-    if (!energyChart || !selectedPlantId.value || !energyFlowChart.value) {
-        // console.warn("[ha-vue-card] Prerequisites not met for update.");
-        return;
-    }
-    console.log("[ha-vue-card] Updating energy flow data (workMode check)...");
-
-    try {
-        // --- 1. 获取最新节点数据 (假设包含 workMode) ---
-        const latestData = await getDeviceAllListByPlantId(selectedPlantId.value);
-        // Example structure assumption:
-        // latestData = {
-        //   gridPower: -500, gridWorkMode: 1, // Sending to grid
-        //   solarPower: 2000, solarWorkMode: 1,
-        //   batPower: -800, batWorkMode: -1, // Charging
-        //   loadPower: 1000, loadWorkMode: -1,
-        //   chargerPower: 700, chargerWorkMode: -1,
-        //   smartPower: 300, smartWorkMode: -1,
-        // }
-        console.log("[ha-vue-card] Fetched data:", latestData);
-
-        // --- 2. 解析节点数据 (功率和 workMode) ---
-        const nodeDataMap = {
-            '电网': { power: parseFloat(latestData?.gridPower ?? 0), workMode: parseInt(latestData?.gridWorkMode ?? 0), color: '#673AB7', icon: '...' },
-            '光伏': { power: parseFloat(latestData?.solarPower ?? 0), workMode: parseInt(latestData?.solarWorkMode ?? 1), color: '#FF9800', icon: '...' }, // Assume PV is always 1 if generating
-            '电池': { power: parseFloat(latestData?.batPower ?? 0), workMode: parseInt(latestData?.batWorkMode ?? 0), color: '#00BCD4', icon: '...' },
-            '家庭负载': { power: parseFloat(latestData?.loadPower ?? 0), workMode: parseInt(latestData?.loadWorkMode ?? -1), color: '#00BCD4', icon: '...' }, // Assume Load is always -1 if consuming
-            '充电桩': { power: parseFloat(latestData?.chargerPower ?? 0), workMode: parseInt(latestData?.chargerWorkMode ?? -1), color: '#4CAF50', icon: '...' }, // Assume Charger is always -1
-            '智能负载': { power: parseFloat(latestData?.smartPower ?? 0), workMode: parseInt(latestData?.smartWorkMode ?? -1), color: '#FF5722', icon: '...' } // Assume Smart Load is always -1
-        };
-         // Replace '...' with actual icon data URIs
-
-        // --- 3. 创建 nodes 数组 ---
-        const containerWidth = energyFlowChart.value.clientWidth;
-        const calculationHeight = containerWidth * 2 / 3;
-        const calculatePosition = (xR, yR) => ({ x: containerWidth * xR, y: calculationHeight * yR });
-        const positionRatios = { /* ... */
-             'grid': [0.15, 0.5], 'solar': [0.5, 0.15], 'battery': [0.5, 0.85],
-             'home': [0.85, 0.5], 'charger': [0.85, 0.2], 'smart': [0.85, 0.8]
-        };
-        const getPos = (name) => { /* ... */
-             let key; if (name === '电网') key = 'grid'; else if (name === '光伏') key = 'solar'; else if (name === '电池') key = 'battery'; else if (name === '家庭负载') key = 'home'; else if (name === '充电桩') key = 'charger'; else if (name === '智能负载') key = 'smart'; else key = name.toLowerCase(); const ratio = positionRatios[key]; return ratio ? calculatePosition(ratio[0], ratio[1]) : calculatePosition(0.5, 0.5);
-        };
-
-        const nodes = Object.entries(nodeDataMap).map(([name, data]) => {
-            let valueStr = `${data.power.toFixed(1)} W`;
-            if (name === '电池') {
-                valueStr = `${data.power > 0 ? `放电: ${data.power.toFixed(1)} W` : `充电: ${Math.abs(data.power).toFixed(1)} W`}`;
-            } else if (name === '家庭负载') {
-                 // Calculate total load for display if needed
-                 const totalHomeLoad = (nodeDataMap['家庭负载']?.power ?? 0) + (nodeDataMap['充电桩']?.power ?? 0) + (nodeDataMap['智能负载']?.power ?? 0);
-                 valueStr = `总计: ${totalHomeLoad.toFixed(1)} W`;
-            }
-            return {
-                name: name,
-                value: valueStr,
-                ...getPos(name),
-                color: data.color,
-                icon: data.icon,
-                workMode: data.workMode // Use workMode from backend
-            };
-        });
-
-        // --- 4. 创建 links 数组 (根据 workMode 配对) ---
-        const potentialLinks = [
-            { source: '光伏', target: '家庭负载' },
-            { source: '光伏', target: '电池' },
-            { source: '光伏', target: '电网' },
-            { source: '电池', target: '家庭负载' },
-            { source: '电池', target: '电网' },
-            { source: '电网', target: '家庭负载' },
-            { source: '电网', target: '电池' },
-            { source: '家庭负载', target: '充电桩' }, // Internal flows might need different logic? Or rely on workMode too? Let's assume they rely on workMode for now.
-            { source: '家庭负载', target: '智能负载' },
-        ];
-
-        const links = [];
-        const threshold = 1; // Minimum power threshold (optional, maybe not needed if workMode is the only trigger)
-
-        potentialLinks.forEach(pl => {
-            const sourceData = nodeDataMap[pl.source];
-            const targetData = nodeDataMap[pl.target];
-
-            if (!sourceData || !targetData) return; // Skip if node data is missing
-
-            // --- The Core Logic: Check for 1/-1 workMode pair ---
-            const isFlowing = (sourceData.workMode === 1 && targetData.workMode === -1) ||
-                              (sourceData.workMode === -1 && targetData.workMode === 1);
-
-            if (isFlowing) {
-                // Determine value for visual scaling (use absolute power of the source/outputting node)
-                let linkValue = 0;
-                if (sourceData.workMode === 1) {
-                    linkValue = Math.abs(sourceData.power);
-                } else { // targetNode must be 1
-                    linkValue = Math.abs(targetData.power);
-                }
-
-                // Optional: Only add if power is significant (or remove this if workMode is absolute)
-                 // if (linkValue < threshold) return;
-
-                 // Determine color based on the source of the energy (the node with workMode: 1)
-                 const sourceColor = sourceData.workMode === 1 ? sourceData.color : targetData.color;
-
-                links.push({
-                    source: pl.source,
-                    target: pl.target,
-                    value: linkValue, // Use derived power for visuals
-                    color: sourceColor
-                });
-            }
-        });
-
-        // --- 5. 调用 setData 更新 Canvas ---
-        console.log("[ha-vue-card] Calling energyChart.setData with nodes:", nodes.length, "links:", links.length);
-        // console.log("Nodes:", nodes.map(n => ({ name: n.name, workMode: n.workMode }))); // Debug nodes
-        // console.log("Links:", links); // Debug active links
-        energyChart.setData(nodes, links);
-
-        // --- 更新统计图 (如果需要) ---
-        // updateStatsChart(latestData);
-
-    } catch (error) {
-        console.error("[ha-vue-card] Error updating energy flow data:", error);
-    }
 };
 </script>
 
