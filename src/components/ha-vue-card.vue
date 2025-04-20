@@ -67,7 +67,7 @@ import {nextTick, onBeforeMount, onBeforeUnmount, onBeforeUpdate, onMounted, onU
 import * as echarts from 'echarts';
 import '@mdi/font/css/materialdesignicons.css';
 import EnergyFlowCanvas from './energy-flow-canvas';
-import {getPlantVos, getStatusNow, getEnergyFlowData, getDeviceBySn} from '../services/api';
+import {getPlantVos, getStatusNow, getEnergyFlowData, getDeviceBySn, login} from '../services/api';
 
 onBeforeMount(() => {
   console.log('[ha-vue-card] 组件即将挂载');
@@ -98,6 +98,7 @@ const onPlantChange = async () => {
   
   // 重新获取数据流程
   try {
+
     // 1. 先获取能流图数据（包含设备SN等信息）
     await fetchEnergyFlowData();
     
@@ -133,7 +134,7 @@ onBeforeUnmount(() => {
 const initializeData = async () => {
   try {
     console.log('[ha-vue-card] 开始初始化数据...');
-    
+    await login('2751043328@qq.com', '85acc0766d3aa341c0e45fafce735e79');
     // 1. 首先获取电站列表
     await fetchPlantList();
     

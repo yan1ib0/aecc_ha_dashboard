@@ -527,7 +527,7 @@ class EnergyFlowCanvas {
 
     async loginAndFetchData() {
         try {
-            await login('2751043328@qq.com', '85acc0766d3aa341c0e45fafce735e79');4
+
             // 请求并渲染数据
             await this.fetchData();
         } catch (error) {
