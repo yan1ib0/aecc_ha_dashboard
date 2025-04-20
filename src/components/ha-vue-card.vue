@@ -1,6 +1,7 @@
 <template>
   <div class="panel">
     <!-- 新增：电站选择卡片区域 -->
+    <h2>{{ name }}</h2>
     <div class="plant-selector-card" style="margin-bottom: 16px;">
       <label for="plant-select">选择电站：</label>
       <select id="plant-select" v-model="selectedPlantId" @change="onPlantChange">
@@ -9,7 +10,6 @@
         </option>
       </select>
     </div>
-    <h1>{{ name }}</h1>
     <div class="content">
       <!-- 能流图 -->
       <div class="chart-container energy-flow-container">
@@ -23,14 +23,14 @@
 
       <!-- 实体数据折叠框组件 -->
       <div class="entities-container">
-        <h2 class="section-title">实体数据</h2>
+        <h2 class="section-title">设备详情</h2>
         <div v-for="(group, groupIndex) in entityGroups" :key="groupIndex" class="entity-group">
           <div class="group-header" @click="toggleGroup(groupIndex)">
             <span>{{ group.name }}</span>
             <span class="arrow" :class="{ 'expanded': group.expanded }">▼</span>
           </div>
           <div v-if="group.expanded" class="group-content">
-            <h3 class="sub-section-title">主组实体</h3>
+            <h3 class="sub-section-title"></h3>
             <div v-for="entity in group.entities" :key="entity.id" class="entity-card">
               <div class="entity-info">
                 <span class="mdi" :class="getEntityIcon(entity.id)"></span>
@@ -67,12 +67,12 @@ import {nextTick, onBeforeMount, onBeforeUnmount, onBeforeUpdate, onMounted, onU
 import * as echarts from 'echarts';
 import '@mdi/font/css/materialdesignicons.css';
 import EnergyFlowCanvas from './energy-flow-canvas';
-import {getPlantVos} from '../services/api';
+import {getPlantVos, getStatusNow, getEnergyFlowData, getDeviceBySn} from '../services/api';
 
 onBeforeMount(() => {
   console.log('[ha-vue-card] 组件即将挂载');
-  // 获取电站列表
-  fetchPlantList();
+  // 获取电站列表并初始化数据
+  initializeData();
 });
 
 onMounted(() => {
@@ -88,22 +88,29 @@ onMounted(() => {
     })));
   }
 
-  // 修改初始化顺序，确保DOM完全渲染
-  nextTick(() => {
-    initCharts();
-    updateEntityGroups();
-
-    // 添加窗口大小变化监听
-    window.addEventListener('resize', handleResize);
-
-  });
+  // 添加窗口大小变化监听
+  window.addEventListener('resize', handleResize);
 });
-const onPlantChange =() => {
+
+const onPlantChange = async () => {
   // 处理电站选择变化
   console.log('[ha-vue-card] 电站选择变化:', selectedPlantId.value);
-  // 更新实体数据
-  updateEntityGroups();
+  
+  // 重新获取数据流程
+  try {
+    // 1. 先获取能流图数据（包含设备SN等信息）
+    await fetchEnergyFlowData();
+    
+    // 2. 更新图表
+    await updateCharts();
+    
+    // 3. 更新实体数据
+    await updateEntityGroups();
+  } catch (error) {
+    console.error('[ha-vue-card] 电站切换更新数据失败:', error);
+  }
 };
+
 onBeforeUpdate(() => {
   console.log('[ha-vue-card] 组件即将更新');
 });
@@ -121,6 +128,62 @@ onBeforeUnmount(() => {
   // 移除窗口大小变化监听
   window.removeEventListener('resize', handleResize);
 });
+
+// 初始化数据的完整流程
+const initializeData = async () => {
+  try {
+    console.log('[ha-vue-card] 开始初始化数据...');
+    
+    // 1. 首先获取电站列表
+    await fetchPlantList();
+    
+    if (plantList.value.length > 0) {
+      // 2. 获取能流图数据（包含设备SN等信息）
+      await fetchEnergyFlowData();
+      
+      // 3. 初始化图表
+      nextTick(() => {
+        initCharts();
+      });
+      
+      // 4. 获取设备详情并更新实体数据
+      await updateEntityGroups();
+    } else {
+      console.error('[ha-vue-card] 无可用电站');
+    }
+  } catch (error) {
+    console.error('[ha-vue-card] 初始化数据失败:', error);
+  }
+};
+
+// 获取能流图数据
+const fetchEnergyFlowData = async () => {
+  try {
+    const energyFlowData = await getEnergyFlowData(selectedPlantId.value);
+    console.log('[ha-vue-card] 获取能源流向数据:', energyFlowData);
+    
+    if (energyFlowData) {
+      // 保存设备基本信息
+      deviceInfo.value = {
+        batSn: energyFlowData.batSn || '',
+        batType: energyFlowData.batType || '',
+        emSn: energyFlowData.emSn || '',
+        emType: energyFlowData.emType || ''
+        // 其他设备信息...
+      };
+      
+      // 保存batSn值，以便后续使用
+      currentBatSn.value = energyFlowData.batSn || '';
+      console.log("[ha-vue-card] 更新batSn:", currentBatSn.value);
+      
+      return energyFlowData;
+    }
+  } catch (error) {
+    console.error('[ha-vue-card] 获取能源流向数据失败:', error);
+  }
+  
+  return null;
+};
 
 const fetchPlantList = async () => {
   try {
@@ -143,15 +206,13 @@ const fetchPlantList = async () => {
     if (plantList.value.length > 0) {
       selectedPlantId.value = plantList.value[0].id;
       console.log('[ha-vue-card] 默认选中电站:', selectedPlantId.value);
-
-      // 选中电站后更新图表数据
-      updateCharts();
     }
   } catch (error) {
     console.error('[ha-vue-card] 获取电站列表失败:', error);
     plantList.value = [];
   }
 };
+
 const props = defineProps({
   hass: {
     type: Object,
@@ -177,9 +238,14 @@ const name = ref(props.config.name || 'AECC能管系统仪表盘');
 const energyFlowChart = ref(null);
 const statsChart = ref(null);
 
+const simulatedData = ref({});
+const links = ref([]); // 用于存储能流图的连接线数据
+const nodes = ref([]); // 用于存储能流图的节点数据
+
 // 电站相关数据
 const plantList = ref([]);
 const selectedPlantId = ref('');
+const currentBatSn = ref(''); // 存储当前电池设备序列号
 const entityGroups = ref([
   {
     name: '传感器组',
@@ -306,31 +372,40 @@ const handleResize = () => {
     });
   }
 };
-
-const updateCharts = () => {
+const updateCharts = async () => {
   // 动态数据生成方法 (暂时注释掉，使用下面的模拟数据)
 
+  // 首先尝试获取能源流向数据以获取batSn
+  try {
+    const energyFlowData = await getEnergyFlowData(selectedPlantId.value);
+    if (energyFlowData?.batSn) {
+      currentBatSn.value = energyFlowData.batSn;
+      console.log("[ha-vue-card] 更新batSn:", currentBatSn.value);
+    }
+  } catch (error) {
+    console.error("[ha-vue-card] 获取batSn失败:", error);
+  }
 
   // 更新能流图
   if (energyChart && energyFlowChart.value) {
     // --- 模拟功率数据 ---
-    // 假设一个所有路径都可能存在的场景
-    const simulatedData = {
+    if(currentBatSn.value){
+      simulatedData.value = {
         gridPower: -500,    // 模拟向电网送电 500W
         solarPower: 2000,   // 模拟光伏发电 2000W
         batPower: 800,     // 模拟电池放电 800W (如果为负，则是充电)
         loadPower: 1000,    // 模拟家庭基础负载 1000W
         chargerPower: 700, // 模拟充电桩功率 700W
         smartPower: 600    // 模拟负载功率 600W
-    };
+      };
+    }
 
-
-    let gridPower = simulatedData.gridPower;
-    let solarPower = simulatedData.solarPower;
-    let batPower = simulatedData.batPower;
-    let loadPower = simulatedData.loadPower;
-    let chargerPower = simulatedData.chargerPower;
-    let smartPower = simulatedData.smartPower;
+    let gridPower = simulatedData.value.gridPower;
+    let solarPower = simulatedData.value.solarPower;
+    let batPower = simulatedData.value.batPower;
+    let loadPower = simulatedData.value.loadPower;
+    let chargerPower = simulatedData.value.chargerPower;
+    let smartPower = simulatedData.value.smartPower;
     const totalHomeLoad = loadPower + chargerPower + smartPower; // 计算总负载
 
     const containerWidth = energyFlowChart.value.clientWidth;
@@ -368,9 +443,9 @@ const updateCharts = () => {
       const ratio = positionRatios[key];
       return ratio ? calculatePosition(ratio[0], ratio[1]) : calculatePosition(0.5, 0.5);
     };
-
+    if (nodes.value){
     // --- 更新节点数据 (使用模拟功率) ---
-    const nodes = [
+       nodes.value = [
        {
         name: '电网',
          power: gridPower,
@@ -432,53 +507,180 @@ const updateCharts = () => {
         workMode: smartPower>0?-1:0, // 负载总是输入
       }
     ];
-
+    }
     // --- 创建包含所有路径的静态 links 数组 (用于测试) ---
     // 颜色根据能量源确定
-    const links = [
-      // 从光伏出发 (橙色)
-      { source: '光伏', target: '家庭负载', value: 800, color: '#FF9800' }, // 曲线
-      { source: '光伏', target: '电池', value: 700, color: '#FF9800' },     // 直线
-      { source: '光伏', target: '电网', value: 500, color: '#FF9800' },     // 曲线 (模拟卖给电网)
+    if (links.value){
+      links.value = [
+        // 从光伏出发 (橙色)
+        { source: '光伏', target: '家庭负载', value: 800, color: '#FF9800' }, // 曲线
+        { source: '光伏', target: '电池', value: 700, color: '#FF9800' },     // 直线
+        { source: '光伏', target: '电网', value: 500, color: '#FF9800' },     // 曲线 (模拟卖给电网)
 
-      // 从电池出发 (青色) - 假设电池正在放电 (batPower > 0)
-      { source: '电池', target: '家庭负载', value: 400, color: '#00BCD4' }, // 曲线
-      { source: '电池', target: '电网', value: 400, color: '#00BCD4' },     // 曲线 (模拟卖给电网)
+        // 从电池出发 (青色) - 假设电池正在放电 (batPower > 0)
+        { source: '电池', target: '家庭负载', value: 400, color: '#00BCD4' }, // 曲线
+        { source: '电池', target: '电网', value: 400, color: '#00BCD4' },     // 曲线 (模拟卖给电网)
 
-       // 从电网出发 (紫色) - 假设电网需要供电给电池 (模拟 gridPower > 0 或需要充电)
-       // 如果 gridPower < 0 (如模拟数据)，这条线理论上不该出现，但为了测试显示，我们强制画一个
-       // 更好的模拟是让 gridPower > 0, batPower < 0
-       { source: '电网', target: '家庭负载', value: 300, color: '#673AB7' }, // 曲线 (假设电网给负载供电)
-       { source: '电网', target: '电池', value: 200, color: '#673AB7' },     // 曲线 (假设电网给电池充电)
+        // 从电网出发 (紫色) - 假设电网需要供电给电池 (模拟 gridPower > 0 或需要充电)
+        // 如果 gridPower < 0 (如模拟数据)，这条线理论上不该出现，但为了测试显示，我们强制画一个
+        // 更好的模拟是让 gridPower > 0, batPower < 0
+        { source: '电网', target: '家庭负载', value: 300, color: '#673AB7' }, // 曲线 (假设电网给负载供电)
+        { source: '电网', target: '电池', value: 200, color: '#673AB7' },     // 曲线 (假设电网给电池充电)
 
-      // 从家庭负载出发 (到子负载，颜色匹配子负载)
-      { source: '家庭负载', target: '充电桩', value: chargerPower, color: '#4CAF50' }, // 直线 (绿色)
-      { source: '家庭负载', target: '负载', value: smartPower, color: '#FF5722' }  // 直线 (红色)
-    ].filter(link => link.value !== 0); // 过滤掉 value 为 0 的连接 (虽然这里都是非零)
+        // 从家庭负载出发 (到子负载，颜色匹配子负载)
+        { source: '家庭负载', target: '充电桩', value: chargerPower, color: '#4CAF50' }, // 直线 (绿色)
+        { source: '家庭负载', target: '负载', value: smartPower, color: '#FF5722' }  // 直线 (红色)
+      ].filter(link => link.value !== 0); // 过滤掉 value 为 0 的连接 (虽然这里都是非零)
+    }
 
-    console.log("Using Simulated Links:", links); // 打印最终使用的 links
+
+    console.log("Using Simulated Links:", links.value); // 打印最终使用的 links
 
     // setData 前无需调用 resize，setData 会触发绘制，绘制前会确保尺寸
-    energyChart.setData(nodes, links);
+    energyChart.setData(nodes.value, links.value);
   }
-
+  
   // 更新统计图
   if (statChart) {
     // 确保图表实例存在
     if (!statChart._disposed) {
-      const timeCategories = ['00:00', '03:00', '06:00', '09:00', '12:00', '15:00', '18:00', '21:00'];
-      const mockData = {
-        battery: [1200, 1800, 2200, 2500, 2000, 1500, 1000, 800],
-        solar: [0, 500, 2000, 3500, 3500, 2500, 2000, 500],
-        grid: [1500, 1200, 800, 500, 700, 800, 1200, 1800],
-        load: [2000, 2500, 2800, 3000, 3200, 3000, 2500, 2000]
-      };
+      try {
+        // 使用保存的batSn值调用getStatusNow
+        console.log("[ha-vue-card] 获取batSn:", currentBatSn.value);
+        const powerData = await getStatusNow(selectedPlantId.value, (currentBatSn.value?currentBatSn.value:''));
+        console.log("[ha-vue-card] 获取功率数据:", powerData);
+        
+        if (powerData) {
+          // 提取所有时间点
+          const times = Object.keys(powerData.solarMap || {}).sort();
+          
+          // 准备四种数据系列，确保null值被转换为0
+          const solarPowerData = times.map(time => (powerData.solarMap[time] !== null && powerData.solarMap[time] !== undefined) ? powerData.solarMap[time] : 0);
+          const gridPowerData = times.map(time => (powerData.gridMap[time] !== null && powerData.gridMap[time] !== undefined) ? powerData.gridMap[time] : 0);
+          const batPowerData = times.map(time => (powerData.batMap[time] !== null && powerData.batMap[time] !== undefined) ? powerData.batMap[time] : 0);
+          const loadPowerData = times.map(time => (powerData.loadMap[time] !== null && powerData.loadMap[time] !== undefined) ? powerData.loadMap[time] : 0);
+          
+          // 使用nextTick确保DOM已更新
+          nextTick(() => {
+            statChart.setOption({
+              title: { text: '功率曲线', left: 'center', top: 0, textStyle: { fontSize: 16 } },
+              tooltip: { 
+                trigger: 'axis',
+                formatter: function(params) {
+                  let result = params[0].axisValue + '<br/>';
+                  params.forEach(param => {
+                    result += param.marker + param.seriesName + ': ' + param.value + ' W<br/>';
+                  });
+                  return result;
+                }
+              },
+              legend: { 
+                data: ['光伏功率', '电网功率', '电池功率', '负载功率'], 
+                bottom: 0, 
+                itemWidth: 15, 
+                itemHeight: 10, 
+                textStyle: { fontSize: 12 } 
+              },
+              grid: { left: '3%', right: '4%', bottom: '15%', top: '15%', containLabel: true },
+              xAxis: { 
+                type: 'category', 
+                data: times, 
+                axisLabel: { 
+                  // 只显示部分时间点标签
+                  interval: Math.max(Math.floor(times.length / 12), 1),
+                  rotate: 45, 
+                  fontSize: 10 
+                },
+                // 确保x轴可以显示指示器
+                axisPointer: {
+                  show: true,
+                  label: {
+                    show: true
+                  }
+                }
+              },
+              yAxis: { 
+                type: 'value', 
+                name: '功率 (W)', 
+                nameTextStyle: { fontSize: 12 }, 
+                axisLabel: { fontSize: 10 } 
+              },
+              series: [
+                { 
+                  name: '光伏功率', 
+                  type: 'line', 
+                  data: solarPowerData, 
+                  smooth: true, 
+                  symbol: 'circle', 
+                  // 显示所有数据点
+                  showSymbol: true,
+                  symbolSize: 5, 
+                  // 移除采样以显示所有点
+                  sampling: 'none',
+                  itemStyle: { color: '#FF9800' }, 
+                  areaStyle: { opacity: 0.2 },
+                  lineStyle: { width: 2, color: '#FF9800' } 
+                },
+                { 
+                  name: '电网功率', 
+                  type: 'line', 
+                  data: gridPowerData, 
+                  smooth: true, 
+                  symbol: 'circle', 
+                  showSymbol: true,
+                  symbolSize: 5, 
+                  sampling: 'none',
+                  itemStyle: { color: '#673AB7' }, 
+                  areaStyle: { opacity: 0.2 },
+                  lineStyle: { width: 2, color: '#673AB7' } 
+                },
+                { 
+                  name: '电池功率', 
+                  type: 'line', 
+                  data: batPowerData, 
+                  smooth: true, 
+                  symbol: 'circle', 
+                  showSymbol: true,
+                  symbolSize: 5, 
+                  sampling: 'none',
+                  itemStyle: { color: '#00BCD4' }, 
+                  areaStyle: { opacity: 0.2 },
+                  lineStyle: { width: 2, color: '#00BCD4' } 
+                },
+                { 
+                  name: '负载功率', 
+                  type: 'line', 
+                  data: loadPowerData, 
+                  smooth: true, 
+                  symbol: 'circle', 
+                  showSymbol: true,
+                  symbolSize: 5, 
+                  sampling: 'none',
+                  itemStyle: { color: '#F44336' }, 
+                  areaStyle: { opacity: 0.2 },
+                  lineStyle: { width: 2, color: '#F44336' } 
+                }
+              ]
+            });
+            console.log("[ha-vue-card] 统计图更新成功");
+          });
+        }
+      } catch (error) {
+        console.error("[ha-vue-card] 获取功率数据或更新统计图失败:", error);
+        
+        // 如果API调用失败，使用默认模拟数据
+        const timeCategories = ['00:00', '03:00', '06:00', '09:00', '12:00', '15:00', '18:00', '21:00'];
+        const mockData = {
+          battery: [1200, 1800, 2200, 2500, 2000, 1500, 1000, 800],
+          solar: [0, 500, 2000, 3500, 3500, 2500, 2000, 500],
+          grid: [1500, 1200, 800, 500, 700, 800, 1200, 1800],
+          load: [2000, 2500, 2800, 3000, 3200, 3000, 2500, 2000]
+        };
 
-      // 使用nextTick确保DOM已更新
-      nextTick(() => {
-        try {
+        // 使用模拟数据更新图表
+        nextTick(() => {
           statChart.setOption({
-            title: { text: '功率曲线', left: 'center', top: 0, textStyle: { fontSize: 16 } },
+            title: { text: '功率曲线 (模拟数据)', left: 'center', top: 0, textStyle: { fontSize: 16 } },
             tooltip: { trigger: 'axis', formatter: p => p.map(i => `${i.seriesName}: ${i.value} W`).join('<br/>') },
             legend: { data: ['电池功率', '光伏功率', '电网功率', '负载功率'], bottom: 0, itemWidth: 15, itemHeight: 10, textStyle: { fontSize: 12 } },
             grid: { left: '3%', right: '4%', bottom: '15%', top: '15%', containLabel: true },
@@ -491,11 +693,8 @@ const updateCharts = () => {
               { name: '负载功率', type: 'line', data: mockData.load, smooth: true, symbol: 'circle', symbolSize: 8, itemStyle: { color: '#F44336' }, lineStyle: { width: 3, color: '#F44336' } }
             ]
           });
-          console.log("[ha-vue-card] 统计图更新成功");
-        } catch (error) {
-          console.error("[ha-vue-card] 统计图更新失败:", error);
-        }
-      });
+        });
+      }
     } else {
       console.warn("[ha-vue-card] 统计图实例已销毁，尝试重新初始化");
       // 尝试重新初始化
@@ -512,48 +711,182 @@ const updateCharts = () => {
   }
 };
 
-const updateEntityGroups = () => {
-  if (props.hass && props.hass.states) {
-    // 保留原有分组结构，只更新实体数据
-    const newGroups = JSON.parse(JSON.stringify(entityGroups.value));
-
-    // 按类型分组实体
-    const groupedEntities = {};
-    Object.entries(props.hass.states).forEach(([entityId, state]) => {
-      const type = entityId.split('.')[0];
-      if (!groupedEntities[type]) {
-        groupedEntities[type] = [];
+// 更新实体分组数据
+const updateEntityGroups = async () => {
+  try {
+    // 首先获取能源流向数据，提取设备基本信息
+    const energyFlowData = await getEnergyFlowData(selectedPlantId.value);
+    
+    if (energyFlowData) {
+      // 保存设备基本信息
+      deviceInfo.value = {
+        emSn: energyFlowData.emSn || '',
+        emType: energyFlowData.emType || '',
+        batSn: energyFlowData.batSn || '',
+        batType: energyFlowData.batType || ''
+      };
+      
+      console.log("[ha-vue-card] 提取设备信息:", deviceInfo.value);
+      
+      // 获取逆变器详细信息
+      if (deviceInfo.value.emSn && deviceInfo.value.emType) {
+        try {
+          const inverterInfo = await getDeviceBySn(deviceInfo.value.emType, deviceInfo.value.emSn);
+          deviceDetailInfo.value.inverter = inverterInfo;
+          console.log("[ha-vue-card] 获取逆变器详细信息:", inverterInfo);
+        } catch (error) {
+          console.error("[ha-vue-card] 获取逆变器详细信息失败:", error);
+        }
       }
-      groupedEntities[type].push({
-        id: entityId,
-        description: state.attributes.friendly_name || entityId,
-        type: type,
-        value: state.state,
-        unit: state.attributes.unit_of_measurement || ''
-      });
-    });
-
-    // 将真实实体数据映射到预设分组结构中
-    newGroups.forEach(group => {
-      const type = group.name.replace('组', '').toLowerCase();
-      if (groupedEntities[type]) {
-        group.entities = groupedEntities[type];
+      
+      // 获取电池详细信息
+      if (deviceInfo.value.batSn && deviceInfo.value.batType) {
+        try {
+          const batteryInfo = await getDeviceBySn(deviceInfo.value.batType, deviceInfo.value.batSn);
+          deviceDetailInfo.value.battery = batteryInfo;
+          console.log("[ha-vue-card] 获取电池详细信息:", batteryInfo);
+        } catch (error) {
+          console.error("[ha-vue-card] 获取电池详细信息失败:", error);
+        }
       }
-
-      // 处理子组
-      if (group.subGroups) {
-        group.subGroups.forEach(subGroup => {
-          const subType = subGroup.name.replace('组', '').toLowerCase();
-          if (groupedEntities[subType]) {
-            subGroup.entities = groupedEntities[subType];
-          }
-        });
-      }
-    });
-
-    entityGroups.value = newGroups;
-    // updateCharts();
+      
+      // 更新实体组数据
+      updateEntityGroupsFromDeviceInfo();
+    }
+  } catch (error) {
+    console.error("[ha-vue-card] 更新实体数据失败:", error);
   }
+};
+
+// 从设备信息更新实体组
+const updateEntityGroupsFromDeviceInfo = () => {
+  // 创建新的实体组
+  const newGroups = [
+    {
+      name: '逆变器设备组',
+      expanded: false,
+      entities: [], // 基本信息
+      subGroups: generateInverterSubGroups()
+    },
+    {
+      name: '电池设备组',
+      expanded: false,
+      entities: [], // 基本信息
+      subGroups: generateBatterySubGroups()
+    }
+  ];
+  
+  // 添加设备基本信息到主组
+  newGroups[0].entities = [
+    { id: 'inverter.sn', description: '逆变器序列号', value: deviceInfo.value.emSn || '未知', unit: '' },
+    { id: 'inverter.type', description: '逆变器型号', value: deviceInfo.value.emType || '未知', unit: '' }
+  ];
+  
+  newGroups[1].entities = [
+    { id: 'battery.sn', description: '电池序列号', value: deviceInfo.value.batSn || '未知', unit: '' },
+    { id: 'battery.type', description: '电池型号', value: deviceInfo.value.batType || '未知', unit: '' }
+  ];
+  
+  // 更新实体组
+  entityGroups.value = newGroups;
+};
+
+// 生成逆变器子组
+const generateInverterSubGroups = () => {
+  const subGroups = [];
+  
+  if (deviceDetailInfo.value.inverter && deviceDetailInfo.value.inverter.deviceInfoMap) {
+    const deviceInfoMap = deviceDetailInfo.value.inverter.deviceInfoMap;
+    
+    // 遍历每个分类（如"基础信息"等）
+    for (const [category, items] of Object.entries(deviceInfoMap)) {
+      // 创建子组
+      const subGroup = {
+        name: category,
+        expanded: false,
+        entities: []
+      };
+      
+      // 遍历该分类下的所有键值对
+      for (const [key, value] of Object.entries(items)) {
+        if (value !== null && value !== undefined) {
+          // 提取单位（如果有）
+          let displayValue = value;
+          let unit = '';
+          
+          // 尝试从值中提取单位，比如"200.0W"中的"W"
+          const match = String(value).match(/^([\d.]+)(\D+)$/);
+          if (match) {
+            displayValue = match[1];
+            unit = match[2];
+          }
+          
+          subGroup.entities.push({
+            id: `inverter.${category}.${key}`,
+            description: key,
+            value: displayValue,
+            unit: unit
+          });
+        }
+      }
+      
+      // 只添加有实体的子组
+      if (subGroup.entities.length > 0) {
+        subGroups.push(subGroup);
+      }
+    }
+  }
+  
+  return subGroups;
+};
+
+// 生成电池子组
+const generateBatterySubGroups = () => {
+  const subGroups = [];
+  
+  if (deviceDetailInfo.value.battery && deviceDetailInfo.value.battery.deviceInfoMap) {
+    const deviceInfoMap = deviceDetailInfo.value.battery.deviceInfoMap;
+    
+    // 遍历每个分类（如"基础信息"等）
+    for (const [category, items] of Object.entries(deviceInfoMap)) {
+      // 创建子组
+      const subGroup = {
+        name: category,
+        expanded: false,
+        entities: []
+      };
+      
+      // 遍历该分类下的所有键值对
+      for (const [key, value] of Object.entries(items)) {
+        if (value !== null && value !== undefined) {
+          // 提取单位（如果有）
+          let displayValue = value;
+          let unit = '';
+          
+          // 尝试从值中提取单位，比如"200.0W"中的"W"
+          const match = String(value).match(/^([\d.]+)(\D+)$/);
+          if (match) {
+            displayValue = match[1];
+            unit = match[2];
+          }
+          
+          subGroup.entities.push({
+            id: `battery.${category}.${key}`,
+            description: key,
+            value: displayValue,
+            unit: unit
+          });
+        }
+      }
+      
+      // 只添加有实体的子组
+      if (subGroup.entities.length > 0) {
+        subGroups.push(subGroup);
+      }
+    }
+  }
+  
+  return subGroups;
 };
 
 // Home Assistant Web Component 生命周期方法
@@ -594,6 +927,29 @@ const getEntityIcon = (entityId) => {
     default: return 'mdi-help-circle';
   }
 };
+
+// 设备相关数据
+const deviceInfo = ref({
+
+  batSn: '',
+  batType: '',
+  // 电表
+  emSn: '',
+  emType: '',
+  //....
+});
+
+// 设备详细信息
+const deviceDetailInfo = ref({
+  inv: null, // 逆变器详细信息
+  bat: null,   // 电池详细信息
+  load: null, // 负载详细信息
+  charger: null, // 充电桩详细信息
+  em: null, // 电表详细信息
+  solar: null, // 太阳能详细信息
+  grid: null, // 电网详细信息
+});
+
 </script>
 
 <style scoped>

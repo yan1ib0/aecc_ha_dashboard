@@ -174,22 +174,14 @@ export const login = async (email, password) => {
 // 会话续期
 const renewSession = async () => {
   try {
-    const response = await api.post('/user/renewSession');
-    if (response && response.result === 0) {
-      console.log('会话续期成功');
-
-      // 尝试更新JSESSIONID
-      const setCookieHeader = response.headers && response.headers['set-cookie'];
-      if (setCookieHeader) {
-        const newJSESSIONID = extractJSESSIONID(setCookieHeader.toString());
-        if (newJSESSIONID) {
-          currentJSESSIONID = newJSESSIONID;
-          console.log('续期更新JSESSIONID:', currentJSESSIONID);
-        }
-      }
-    } else {
-      console.error('会话续期失败:', response);
-    }
+    const response = await api.post('/user/login', {
+      email,
+      password,
+      phoneOs: 1,
+      phoneModel: "1.1",
+      appVersion: "V1.1"
+    });
+    console.log('登录响应:', response);
   } catch (error) {
     console.error('会话续期失败:', error);
   }
@@ -241,12 +233,14 @@ export const getStatusNow = async (plantId = 1102, deviceSn = '') => {
     //当日 yyyy-MM-dd
     const time = new Date().toISOString().split('T')[0];
     const response = await api.post('/energy/getEnergyDataDay', null, {
+
       params: { plantId, time, deviceSn }
+      // params: { plantId, time:'2025-04-16' , deviceSn }
     });
-    // console.log('电池状态数据:', response);
+    console.log('功率统计图数据:', response);
     return response;
   } catch (error) {
-    console.error('获取电池状态数据失败:', error);
+    console.error('功率统计图数据获取失败:', error);
     throw error;
   }
 };
@@ -282,7 +276,7 @@ export const getDeviceBySn = async (deviceType, deviceSn) => {
   try {
     const time = new Date().toISOString().split('T')[0];
     const response = await api.post('/device/getDeviceBySn', null, {
-      params: { deviceType, time, deviceSn }
+      params: { deviceType, time, sn:deviceSn }
     })
     console.log('设备自定义详情信息:', response);
     return response;
