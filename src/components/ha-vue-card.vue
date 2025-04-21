@@ -1684,7 +1684,7 @@ const fetchAiPlanData = async () => {
 
     if (aiData) {
       // 根据Python逻辑处理AI状态
-
+      aiPlanState.value = aiData.modeStr
     } else {
       aiPlanState.value = "No Data";
     }
