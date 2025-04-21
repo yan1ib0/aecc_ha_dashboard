@@ -6,6 +6,87 @@ const isDevelopment = import.meta.env.DEV;
 // 会话ID存储
 let currentJSESSIONID = '';
 
+// 从Home Assistant配置中获取用户凭据
+const getCredentialsFromConfig = () => {
+  try {
+    // 首先尝试从全局配置中获取（适用于卡片模式）
+    if (window.haCard && window.haCard.config) {
+      const config = window.haCard.config;
+      if (config.username && config.password) {
+        return {
+          username: config.username,
+          password: config.password // 配置中的密码假设已经是明文，接口中会进行MD5加密
+        };
+      }
+    }
+    
+    // 然后尝试从本地存储中获取（适用于panel_custom模式）
+    const storedUsername = localStorage.getItem('aecc_username');
+    const storedPassword = localStorage.getItem('aecc_password');
+    
+    if (storedUsername && storedPassword) {
+      return {
+        username: storedUsername,
+        password: storedPassword // localStorage中的密码已经是MD5加密后的
+      };
+    }
+    
+    // 尝试从URL参数获取（开发调试用）
+    const urlParams = new URLSearchParams(window.location.search);
+    const urlUsername = urlParams.get('username');
+    const urlPassword = urlParams.get('password');
+    
+    if (urlUsername && urlPassword) {
+      // 存储到本地存储以便后续使用，URL参数中的密码为明文，需要MD5加密
+      localStorage.setItem('aecc_username', urlUsername);
+      
+      // 对URL参数中的密码进行MD5加密
+      try {
+        // 这里我们假设前端已经定义了md5函数
+        if (typeof window.md5 === 'function') {
+          const encryptedPassword = window.md5(urlPassword);
+          localStorage.setItem('aecc_password', encryptedPassword);
+        } else {
+          // 如果没有md5函数，则直接存储（不推荐）
+          localStorage.setItem('aecc_password', urlPassword);
+        }
+      } catch (e) {
+        console.error('MD5加密密码失败:', e);
+        localStorage.setItem('aecc_password', urlPassword);
+      }
+      
+      return {
+        username: urlUsername,
+        password: urlPassword // URL中的密码是明文，接口中会进行MD5加密
+      };
+    }
+  } catch (error) {
+    console.error('获取凭据时出错:', error);
+  }
+  
+  // 如果都找不到，返回空值
+  return { username: '', password: '' };
+};
+
+// 获取Home Assistant系统语言
+const getHaLanguage = () => {
+  // 尝试从localStorage获取语言设置
+  const haLanguage = localStorage.getItem('selectedLanguage');
+  if (haLanguage) {
+    return haLanguage;
+  }
+  
+  // 尝试从浏览器语言获取
+  const browserLanguage = navigator.language || navigator.userLanguage;
+  if (browserLanguage) {
+    // 使用完整的语言代码，如 'zh-CN', 'en-US'
+    return browserLanguage;
+  }
+  
+  // 默认返回英语
+  return 'en-US';
+};
+
 // 动态确定baseURL
 const getBaseUrl = () => {
   // 开发环境使用代理
@@ -41,6 +122,7 @@ const api = axios.create({
   timeout: 10000,
   headers: {
     'Content-Type': 'application/json',
+    'Accept-Language': getHaLanguage(), // 添加语言支持
   },
   withCredentials: true // 允许跨域请求携带cookie
 });
@@ -83,6 +165,9 @@ api.interceptors.request.use(
         // console.log('从浏览器cookie获取JSESSIONID:', currentJSESSIONID);
       }
     }
+
+    // 添加语言支持到请求头
+    config.headers['Accept-Language'] = getHaLanguage();
 
     // 在生产环境添加额外的认证头
     if (!isDevelopment) {
@@ -127,14 +212,36 @@ api.interceptors.response.use(
 );
 
 // 登录接口
-export const login = async (email, password) => {
+export const login = async (username, password) => {
   try {
+    // 如果未提供username和password，尝试从配置中获取
+    const credentials = getCredentialsFromConfig();
+    const loginUsername = username || credentials.username;
+    let loginPassword = password || credentials.password;
+    
+    // 验证凭据是否存在
+    if (!loginUsername || !loginPassword) {
+      throw new Error('未配置用户名和密码，请在Home Assistant配置中添加username和password');
+    }
+    
+    // 对非加密密码进行MD5加密，如果密码长度不是32位或不符合MD5格式
+    if (loginPassword.length !== 32 || !/^[a-f0-9]{32}$/i.test(loginPassword)) {
+      // 确保md5函数可用
+      if (typeof window.md5 === 'function') {
+        loginPassword = window.md5(loginPassword);
+      } else if (typeof md5 === 'function') {
+        loginPassword = md5(loginPassword);
+      } else {
+        console.warn('没有找到md5函数，无法加密密码！');
+      }
+    }
+    
     // 登录前清除之前的会话ID
     currentJSESSIONID = '';
 
     const response = await api.post('/user/login', {
-      email,
-      password,
+      email: loginUsername, // API接口仍然使用email字段，但我们在配置中使用username
+      password: loginPassword,
       phoneOs: 1,
       phoneModel: "1.1",
       appVersion: "V1.1"
@@ -174,14 +281,33 @@ export const login = async (email, password) => {
 // 会话续期
 const renewSession = async () => {
   try {
+    // 从配置中获取凭据
+    const credentials = getCredentialsFromConfig();
+    
+    // 验证凭据是否存在
+    if (!credentials.username || !credentials.password) {
+      console.error('未配置用户名和密码，无法进行会话续期');
+      return;
+    }
+    
+    // 确保密码是MD5加密的
+    let password = credentials.password;
+    if (password.length !== 32 || !/^[a-f0-9]{32}$/i.test(password)) {
+      if (typeof window.md5 === 'function') {
+        password = window.md5(password);
+      } else if (typeof md5 === 'function') {
+        password = md5(password);
+      }
+    }
+    
     const response = await api.post('/user/login', {
-      email,
-      password,
+      email: credentials.username, // API接口仍然使用email字段，但我们在配置中使用username
+      password: password,
       phoneOs: 1,
       phoneModel: "1.1",
       appVersion: "V1.1"
     });
-    console.log('登录响应:', response);
+    console.log('会话续期响应:', response);
   } catch (error) {
     console.error('会话续期失败:', error);
   }
@@ -286,6 +412,53 @@ export const getDeviceBySn = async (deviceType, deviceSn) => {
     throw error;
   }
 }
+// /aiSystem/getAiSystemByPlantId  get params={plantId}
+export const getAiSystemByPlantId = async (plantId) => {
+  try {
+    const response = await api.get('/aiSystem/getAiSystemByPlantId', {
+      params: { plantId }
+    })
+    console.log('获取电站AI系统数据:', response);
+    return response;
+  } catch (error) {
+    console.error('获取电站AI系统数据失败:', error);
+    throw error;
+  }
+}
+
+// 设置充电器开关状态
+export const setChargerStatus = async (deviceSn, status) => {
+  try {
+    const response = await api.post('/device/setChargerStatus', null, {
+      params: { 
+        deviceSn, 
+        status: status ? 1 : 0 
+      }
+    });
+    console.log('设置充电器状态:', response);
+    return response;
+  } catch (error) {
+    console.error('设置充电器状态失败:', error);
+    throw error;
+  }
+};
+
+// 设置负载开关状态
+export const setLoadStatus = async (deviceSn, status) => {
+  try {
+    const response = await api.post('/device/setLoadStatus', null, {
+      params: { 
+        deviceSn, 
+        status: status ? 1 : 0 
+      }
+    });
+    console.log('设置负载状态:', response);
+    return response;
+  } catch (error) {
+    console.error('设置负载状态失败:', error);
+    throw error;
+  }
+};
 
 export default api;
 

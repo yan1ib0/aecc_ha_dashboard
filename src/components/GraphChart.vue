@@ -43,9 +43,9 @@ const getOption = () => ({
     type: 'graph',         // 图表类型：关系图
     layout: 'none',        // 布局类型：不采用自动布局，使用手动指定的坐标
     data: [
-      // 电网节点配置
+      // Grid节点配置
       {
-        name: '电网',
+        name: 'Grid',
         symbolSize: nodeSize,
         symbol: `image://${localIcons.grid}`,
         itemStyle: { color: '#2196F3' },
@@ -59,7 +59,7 @@ const getOption = () => ({
         }
       },
       {
-        name: '光伏',
+        name: 'Solar',
         symbolSize: nodeSize,
         symbol: `image://${localIcons.solar}`,
         itemStyle: { color: '#FF9800' },
@@ -73,7 +73,7 @@ const getOption = () => ({
         }
       },
       {
-        name: '家庭负载',
+        name: 'Home Load',
         symbolSize: nodeSize,
         symbol: `image://${localIcons.home}`,
         itemStyle: { color: '#F44336' },
@@ -87,7 +87,7 @@ const getOption = () => ({
         }
       },
       {
-        name: '充电桩',
+        name: 'Charger',
         symbolSize: nodeSize,
         symbol: `image://${localIcons.charger}`,
         itemStyle: { color: '#4CAF50' },
@@ -101,7 +101,7 @@ const getOption = () => ({
         }
       },
       {
-        name: '电池',
+        name: 'Battery',
         symbolSize: nodeSize,
         symbol: `image://${localIcons.battery}`,
         itemStyle: { color: '#9C27B0' },
@@ -115,7 +115,7 @@ const getOption = () => ({
         }
       },
       {
-        name: '负载',
+        name: 'Load',
         symbolSize: nodeSize,
         symbol: `image://${localIcons.smart}`,
         itemStyle: { color: '#FF5722' },

@@ -9,15 +9,15 @@ class EnergyFlowCanvas {
         this.titleElement.style.textAlign = 'center';
         this.titleElement.style.color = 'var(--primary-text-color)';
         this.titleElement.style.marginBottom = '16px';
-        this.titleElement.textContent = '能流图';
+        this.titleElement.textContent = 'Energy Flow';
         this.container.appendChild(this.titleElement);
         this.iconMap = {
-            '电网': 'mdi:transmission-tower',
-            '光伏': 'mdi:solar-panel',
-            '电池': 'mdi:battery',
-            '家庭负载': 'mdi:home',
-            '充电桩': 'mdi:ev-station',
-            '负载': 'mdi:power-socket'
+            'Grid': 'mdi:transmission-tower',
+            'Solar': 'mdi:solar-panel',
+            'Battery': 'mdi:battery',
+            'Home Load': 'mdi:home',
+            'Charger': 'mdi:ev-station',
+            'Load': 'mdi:power-socket'
         };
         this.loadedIcons = new Map();
         // 创建Canvas元素
@@ -35,7 +35,6 @@ class EnergyFlowCanvas {
         this.links = [];
         this.particles = [];
         this.animationFrameId = null;
-        this.particleSpeedFactor = 1;
         this.nodeRadius = 30;  // 默认节点半径
         this.loadedIcons = new Map();
         this.lastUpdateTime = Date.now(); // 初始化上次更新时间戳
@@ -188,12 +187,12 @@ class EnergyFlowCanvas {
         const targetX = targetNode.x;
         const targetY = targetNode.y;
 
-        const homeNode = this.nodes.find(n => n.name === '家庭负载');
-        const gridNode = this.nodes.find(n => n.name === '电网');
-        const solarNode = this.nodes.find(n => n.name === '光伏');
-        const batteryNode = this.nodes.find(n => n.name === '电池');
-        const chargerNode = this.nodes.find(n => n.name === '充电桩');
-        const smartNode = this.nodes.find(n => n.name === '负载');
+        const homeNode = this.nodes.find(n => n.name === 'Home Load');
+        const gridNode = this.nodes.find(n => n.name === 'Grid');
+        const solarNode = this.nodes.find(n => n.name === 'Solar');
+        const batteryNode = this.nodes.find(n => n.name === 'Battery');
+        const chargerNode = this.nodes.find(n => n.name === 'Charger');
+        const smartNode = this.nodes.find(n => n.name === 'Load');
 
         ctx.save();
         ctx.strokeStyle = link.color;
@@ -209,7 +208,7 @@ class EnergyFlowCanvas {
         const radius = this.nodeRadius;
         const angle = Math.atan2(targetY - sourceY, targetX - sourceX);
 
-        if (link.source === '电网' && link.target === '家庭负载' && gridNode && homeNode) {
+        if (link.source === 'Grid' && link.target === 'Home Load' && gridNode && homeNode) {
             startX = gridNode.x + radius;
             startY = gridNode.y;
             endX = homeNode.x - radius;
@@ -220,7 +219,7 @@ class EnergyFlowCanvas {
             cp2y = endY;
             ctx.moveTo(startX, startY);
             ctx.bezierCurveTo(cp1x, cp1y, cp2x, cp2y, endX, endY);
-        } else if (link.source === '光伏' && link.target === '家庭负载' && solarNode && homeNode) {
+        } else if (link.source === 'Solar' && link.target === 'Home Load' && solarNode && homeNode) {
             startX = solarNode.x;
             startY = solarNode.y + radius;
             endX = homeNode.x;
@@ -231,7 +230,7 @@ class EnergyFlowCanvas {
             cp2y = cp1y;
             ctx.moveTo(startX, startY);
             ctx.bezierCurveTo(cp1x, cp1y, cp2x, cp2y, endX, endY);
-        } else if (link.source === '电池' && link.target === '家庭负载' && batteryNode && homeNode) {
+        } else if (link.source === 'Battery' && link.target === 'Home Load' && batteryNode && homeNode) {
             startX = batteryNode.x;
             startY = batteryNode.y - radius;
             endX = homeNode.x;
@@ -242,28 +241,28 @@ class EnergyFlowCanvas {
             cp2y = cp1y;
             ctx.moveTo(startX, startY);
             ctx.bezierCurveTo(cp1x, cp1y, cp2x, cp2y, endX, endY);
-        } else if (link.source === '家庭负载' && link.target === '充电桩' && homeNode && chargerNode) {
+        } else if (link.source === 'Home Load' && link.target === 'Charger' && homeNode && chargerNode) {
             startX = sourceX + Math.cos(angle) * radius;
             startY = sourceY + Math.sin(angle) * radius;
             endX = targetX - Math.cos(angle) * radius;
             endY = targetY - Math.sin(angle) * radius;
             ctx.moveTo(startX, startY);
             ctx.lineTo(endX, endY);
-        } else if (link.source === '家庭负载' && link.target === '负载' && homeNode && smartNode) {
+        } else if (link.source === 'Home Load' && link.target === 'Load' && homeNode && smartNode) {
             startX = sourceX + Math.cos(angle) * radius;
             startY = sourceY + Math.sin(angle) * radius;
             endX = targetX - Math.cos(angle) * radius;
             endY = targetY - Math.sin(angle) * radius;
             ctx.moveTo(startX, startY);
             ctx.lineTo(endX, endY);
-        } else if (link.source === '光伏' && link.target === '电池' && solarNode && batteryNode) {
+        } else if (link.source === 'Solar' && link.target === 'Battery' && solarNode && batteryNode) {
             startX = sourceX + Math.cos(angle) * radius;
             startY = sourceY + Math.sin(angle) * radius;
             endX = targetX - Math.cos(angle) * radius;
             endY = targetY - Math.sin(angle) * radius;
             ctx.moveTo(startX, startY);
             ctx.lineTo(endX, endY);
-        } else if (link.source === '光伏' && link.target === '电网' && solarNode && gridNode) {
+        } else if (link.source === 'Solar' && link.target === 'Grid' && solarNode && gridNode) {
             startX = solarNode.x;
             startY = solarNode.y + radius;
             endX = gridNode.x;
@@ -274,7 +273,7 @@ class EnergyFlowCanvas {
             cp2y = cp1y;
             ctx.moveTo(startX, startY);
             ctx.bezierCurveTo(cp1x, cp1y, cp2x, cp2y, endX, endY);
-        } else if (link.source === '电池' && link.target === '电网' && batteryNode && gridNode) {
+        } else if (link.source === 'Battery' && link.target === 'Grid' && batteryNode && gridNode) {
             startX = batteryNode.x;
             startY = batteryNode.y - radius;
             endX = gridNode.x;
@@ -285,7 +284,7 @@ class EnergyFlowCanvas {
             cp2y = cp1y;
             ctx.moveTo(startX, startY);
             ctx.bezierCurveTo(cp1x, cp1y, cp2x, cp2y, endX, endY);
-        } else if (link.source === '电网' && link.target === '电池' && gridNode && batteryNode) {
+        } else if (link.source === 'Grid' && link.target === 'Battery' && gridNode && batteryNode) {
             startX = gridNode.x;
             startY = gridNode.y + radius;
             endX = batteryNode.x;
@@ -327,10 +326,10 @@ class EnergyFlowCanvas {
         const targetY = targetNode.y;
         const radius = this.nodeRadius;
 
-        const homeNode = this.nodes.find(n => n.name === '家庭负载');
-        const gridNode = this.nodes.find(n => n.name === '电网');
-        const solarNode = this.nodes.find(n => n.name === '光伏');
-        const batteryNode = this.nodes.find(n => n.name === '电池');
+        const homeNode = this.nodes.find(n => n.name === 'Home Load');
+        const gridNode = this.nodes.find(n => n.name === 'Grid');
+        const solarNode = this.nodes.find(n => n.name === 'Solar');
+        const batteryNode = this.nodes.find(n => n.name === 'Battery');
 
         let startX, startY, endX, endY, cp1x, cp1y, cp2x, cp2y;
         let pathType = 'line';
@@ -348,7 +347,7 @@ class EnergyFlowCanvas {
             };
         };
 
-        if (link.source === '电网' && link.target === '家庭负载' && gridNode && homeNode) {
+        if (link.source === 'Grid' && link.target === 'Home Load' && gridNode && homeNode) {
             pathType = 'bezier';
             startX = gridNode.x + radius;
             startY = gridNode.y;
@@ -358,7 +357,7 @@ class EnergyFlowCanvas {
             cp1y = startY;
             cp2x = cp1x;
             cp2y = endY;
-        } else if (link.source === '光伏' && link.target === '家庭负载' && solarNode && homeNode) {
+        } else if (link.source === 'Solar' && link.target === 'Home Load' && solarNode && homeNode) {
             pathType = 'bezier';
             startX = solarNode.x;
             startY = solarNode.y + radius;
@@ -368,7 +367,7 @@ class EnergyFlowCanvas {
             cp1y = startY + (endY - startY) * 0.5;
             cp2x = endX;
             cp2y = cp1y;
-        } else if (link.source === '电池' && link.target === '家庭负载' && batteryNode && homeNode) {
+        } else if (link.source === 'Battery' && link.target === 'Home Load' && batteryNode && homeNode) {
             pathType = 'bezier';
             startX = batteryNode.x;
             startY = batteryNode.y - radius;
@@ -378,25 +377,25 @@ class EnergyFlowCanvas {
             cp1y = startY + (endY - startY) * 0.5;
             cp2x = endX;
             cp2y = cp1y;
-        } else if (link.source === '家庭负载' && link.target === '充电桩') {
+        } else if (link.source === 'Home Load' && link.target === 'Charger') {
             pathType = 'line';
             startX = sourceX + Math.cos(angle) * radius;
             startY = sourceY + Math.sin(angle) * radius;
             endX = targetX - Math.cos(angle) * radius;
             endY = targetY - Math.sin(angle) * radius;
-        } else if (link.source === '家庭负载' && link.target === '负载') {
+        } else if (link.source === 'Home Load' && link.target === 'Load') {
             pathType = 'line';
             startX = sourceX + Math.cos(angle) * radius;
             startY = sourceY + Math.sin(angle) * radius;
             endX = targetX - Math.cos(angle) * radius;
             endY = targetY - Math.sin(angle) * radius;
-        } else if (link.source === '光伏' && link.target === '电池') {
+        } else if (link.source === 'Solar' && link.target === 'Battery') {
             pathType = 'line';
             startX = sourceX + Math.cos(angle) * radius;
             startY = sourceY + Math.sin(angle) * radius;
             endX = targetX - Math.cos(angle) * radius;
             endY = targetY - Math.sin(angle) * radius;
-        } else if (link.source === '光伏' && link.target === '电网' && solarNode && gridNode) {
+        } else if (link.source === 'Solar' && link.target === 'Grid' && solarNode && gridNode) {
             pathType = 'bezier';
             startX = solarNode.x;
             startY = solarNode.y + radius;
@@ -406,7 +405,7 @@ class EnergyFlowCanvas {
             cp1y = startY + (endY - startY) * 0.5;
             cp2x = endX;
             cp2y = cp1y;
-        } else if (link.source === '电池' && link.target === '电网' && batteryNode && gridNode) {
+        } else if (link.source === 'Battery' && link.target === 'Grid' && batteryNode && gridNode) {
             pathType = 'bezier';
             startX = batteryNode.x;
             startY = batteryNode.y - radius;
@@ -416,7 +415,7 @@ class EnergyFlowCanvas {
             cp1y = startY + (endY - startY) * 0.5;
             cp2x = endX;
             cp2y = cp1y;
-        } else if (link.source === '电网' && link.target === '电池' && gridNode && batteryNode) {
+        } else if (link.source === 'Grid' && link.target === 'Battery' && gridNode && batteryNode) {
             pathType = 'bezier';
             startX = gridNode.x;
             startY = gridNode.y + radius;
@@ -508,11 +507,11 @@ class EnergyFlowCanvas {
             // workmode 从nodes 里找
             const sourceNode = this.nodes.find(n => n.name === particle.link.source);
             const targetNode = this.nodes.find(n => n.name === particle.link.target);
-            // console.log("粒子节点判断:", sourceNode, targetNode);
+
             if (sourceNode.workMode === 1 && targetNode.workMode === -1){
                 this.drawParticle(particle);
             }
-            if(sourceNode.name === '家庭负载' && targetNode.workMode === 1){
+            if(sourceNode.name === 'Home Load' && targetNode.workMode === 1){
                 this.drawParticle(particle);
             }
         });
@@ -557,7 +556,7 @@ class EnergyFlowCanvas {
                     batWorkMode,
                     chargerList,
                 } = flowData;
-                // console.log("workmode:电网="+gridWorkMode+" 光伏="+solarWorkMode+" 电池="+batWorkMode+" 负载="+loadWorkMode+" 家庭负载="+homeWorkMode);
+                // console.log("workmode:Grid="+gridWorkMode+" Solar="+solarWorkMode+" Battery="+batWorkMode+" Load="+loadWorkMode+" Home Load="+homeWorkMode);
                 const chargerPower = chargerList?.reduce((sum, charger) => sum + (charger.power || 0), 0) || 0;
                 let chargerWorkMode=0;
                 if(!chargerPower)
@@ -590,7 +589,7 @@ class EnergyFlowCanvas {
 
                 const getPosition = (name) => {
                     let key;
-                    if (name === '电网') key = 'grid'; else if (name === '光伏') key = 'solar'; else if (name === '电池') key = 'battery'; else if (name === '家庭负载') key = 'home'; else if (name === '充电桩') key = 'charger'; else if (name === '负载') key = 'smart'; else key = name.toLowerCase();
+                    if (name === 'Grid') key = 'grid'; else if (name === 'Solar') key = 'solar'; else if (name === 'Battery') key = 'battery'; else if (name === 'Home Load') key = 'home'; else if (name === 'Charger') key = 'charger'; else if (name === 'Load') key = 'smart'; else key = name.toLowerCase();
 
                     const ratio = positionRatios[key];
                     return ratio ? calculatePosition(ratio[0], ratio[1]) : calculatePosition(0.5, 0.5);
@@ -599,43 +598,43 @@ class EnergyFlowCanvas {
                 const nodes =
                     [
                         {
-                            name: '电网',
-                            value: `${Math.abs(gridPower).toFixed(1)} W`, ...getPosition('电网'),
+                            name: 'Grid',
+                            value: `${Math.abs(gridPower).toFixed(1)} W`, ...getPosition('Grid'),
                             color: '#673AB7',
                             icon: 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCI+PHBhdGggZD0iTTEyIDJ2NC4wM0E4IDggMCAwIDAgNi4wNCAxMkgydjJoNC4wM0E4IDggMCAwIDAgMTIgMTkuOTZWMjRoMnYtNC4wM0E4IDggMCAwIDAgMTkuOTYgMTRIMjR2LTJoLTQuMDNBOCA4IDAgMCAwIDE0IDYuMDRWMmgtMnptLTIgMTBhMiAyIDAgMSAxIDIgMiAyIDIgMCAwIDEtMi0yeiIgZmlsbD0iIzY3M0FCNyIvPjwvc3ZnPg==',
                             workMode: parseInt(gridWorkMode)
                         },
                         {
-                            name: '光伏',
-                            value: `${solarPower.toFixed(1)} W`, ...getPosition('光伏'),
+                            name: 'Solar',
+                            value: `${solarPower.toFixed(1)} W`, ...getPosition('Solar'),
                             color: '#FF9800',
                             icon: 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCI+PHBhdGggZD0iTTMuNSAxOGgxN3YyaC0xN3YtMnptMTctMTJoMnYxMGgtMlY2em0tNCAzaDJ2N2gtMlY5em0tNCAtM2gydjEwaC0yVjZ6bS00IDZoMnY0aC0ydi00em0tNCAtM2gydjdIM1Y5eiIgZmlsbD0iI0ZGOTgwMCIvPjwvc3ZnPg==',
                             workMode: parseInt(solarWorkMode)
                         },
                         {
-                            name: '电池',
-                            value: batPower > 0 ? `放电: ${batPower.toFixed(1)} W` : `充电: ${Math.abs(batPower).toFixed(1)} W`, ...getPosition('电池'),
+                            name: 'Battery',
+                            value: batWorkMode > 0 ? `Discharger: ${batPower.toFixed(1)} W` : `Charger: ${Math.abs(batPower).toFixed(1)} W`, ...getPosition('Battery'),
                             color: '#00BCD4',
                             icon: 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCI+PHBhdGggZD0iTTE2IDEwSDh2NEgxNnYtNHptLjY3LThIMTVWMGgtNnYySDcuMzNBMS4zMyAxLjMzIDAgMCAwIDYgMy4zM3YxNy4zNGMwIC43My42IDEuMzMgMS4zMyAxLjMzaDkuMzRjLjczIDAgMS4zMy0uNiAxLjMzLTEuMzNWMy4zM0ExLjMzIDEuMzMgMCAwIDAgMTYuNjcgMnoiIGZpbGw9IiMwMEJDRDQiLz48L3N2Zz4=',
                             workMode: parseInt(batWorkMode)
                         },
                         {
-                            name: '家庭负载',
-                            value: `总计: ${totalLoadPower.toFixed(1)} W`, ...getPosition('家庭负载'),
+                            name: 'Home Load',
+                            value: `total: ${totalLoadPower.toFixed(1)} W`, ...getPosition('Home Load'),
                             color: '#00BCD4',
                             icon: 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCI+PHBhdGggZD0iTTEyIDNMNCAxMHYxMmgxNlYxMGwtOC03em02IDE0aC0zdi01aC02djVINnYtN2w2LTUgNiA1djd6IiBmaWxsPSIjMDBCQ0Q0Ii8+PC9zdmc+',
                             workMode: parseInt(loadWorkMode)
                         },
                         {
-                            name: '充电桩',
-                            value: `${chargerPower.toFixed(1)} W`, ...getPosition('充电桩'),
+                            name: 'Charger',
+                            value: `${chargerPower.toFixed(1)} W`, ...getPosition('Charger'),
                             color: '#4CAF50',
                             icon: 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCI+PHBhdGggZD0iTTEyIDE4SDZWMmgxNHYxNmgtOHptMi01aDJ2LTJoMlY5aC0yVjdoLTJ2MmgtdmwtNC45IDloNi45eiIgZmlsbD0iIzRDQUY1MCIvPjwvc3ZnPg==',
                             workMode: chargerWorkMode
                         },
                         {
-                            name: '负载',
-                            value: `${homePower.toFixed(1)} W`, ...getPosition('负载'),
+                            name: 'Load',
+                            value: `${homePower.toFixed(1)} W`, ...getPosition('Load'),
                             color: '#FF5722',
                             icon: 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCI+PHBhdGggZD0iTTUgM3YxNmgxNlYzSDV6bTE0IDE0SDdWNWgxMnYxMnptLTctMWgyek0xNSA4aDJ2OGgtMlY4ek0xMSA4aDJ2M2gtMnYtM3ptMCA1aDJ2M2gtMnYtM3pNNyA4aDJ2MkgzVjhoNHY1eiIgZmlsbD0iI0ZGNTcyMiIvPjwvc3ZnPg==',
                             workMode: parseInt(homeWorkMode)
