@@ -16,8 +16,8 @@ AECC能源管理系统是一个Home Assistant自定义面板，提供能源流�
 
 1. 确保已安装[HACS](https://hacs.xyz/)
 2. 点击引入ha前端页面：
-[![Open your Home Assistant instance and open a repository inside the Home Assistant Community Store.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?repository=https%3A%2F%2Fgithub.com%2Fyan1ib0%2Faecc_ha_dashboard&category=custom_panel&owner=aecc)
-2. 在HACS中搜索"AECC Energy Management System"并安装
+   [![Open your Home Assistant instance and open a repository inside the Home Assistant Community Store.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?repository=https%3A%2F%2Fgithub.com%2Fyan1ib0%2Faecc_ha_dashboard&category=custom_panel&owner=yan1ib0) 
+3. 在HACS中搜索"AECC Energy Management System"并安装
 4. 重启Home Assistant
 
 ### 手动安装
