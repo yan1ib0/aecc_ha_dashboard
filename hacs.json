@@ -1,0 +1,9 @@
+{
+  "name": "AECC Energy Management System",
+  "render_readme": true,
+  "filename": "vue-card-panel.js",
+  "content_in_root": true,
+  "domains": ["panel_custom"],
+  "iot_class": "calculated",
+  "homeassistant_api": true
+} 
