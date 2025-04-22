@@ -210,7 +210,7 @@ export const login = async (username, password) => {
   try {
     // 如果未提供username和password，尝试从配置中获取
     const credentials = getCredentialsFromConfig();
-    console.log(credentials)
+    // console.log(credentials)
     const loginUsername = username || credentials.username;
     let loginPassword = password || credentials.password;
     
@@ -241,7 +241,7 @@ export const login = async (username, password) => {
       phoneModel: "1.1",
       appVersion: "V1.1"
     });
-    console.log('登录响应:', response);
+    // console.log('登录响应:', response);
 
     // 尝试从响应中获取新的JSESSIONID
     if (response) {
@@ -302,7 +302,7 @@ const renewSession = async () => {
       phoneModel: "1.1",
       appVersion: "V1.1"
     });
-    console.log('会话续期响应:', response);
+    // console.log('会话续期响应:', response);
   } catch (error) {
     console.error('会话续期失败:', error);
   }
@@ -339,7 +339,7 @@ export const getEnergyFlowData = async (plantId) => {
   try {
     // 如果没有提供plantId，尝试从配置中获取
     const credentials = getCredentialsFromConfig();
-    const targetPlantId = plantId || credentials.plant_id || 1102;
+    const targetPlantId = plantId || credentials.plant_id ;
     
     // 使用params方式传递参数
     return await api.post('/energy/getHomeCountData', null, {
@@ -356,14 +356,14 @@ export const getStatusNow = async (plantId, deviceSn = '') => {
   try {
     // 如果没有提供plantId，尝试从配置中获取
     const credentials = getCredentialsFromConfig();
-    const targetPlantId = plantId || credentials.plant_id || 1102;
+    const targetPlantId = plantId || credentials.plant_id ;
     
     //当日 yyyy-MM-dd
     const time = new Date().toISOString().split('T')[0];
     const response = await api.post('/energy/getEnergyDataDay', null, {
       params: { plantId: targetPlantId, time, deviceSn }
     });
-    console.log('功率统计图数据:', response);
+    // console.log('功率统计图数据:', response);
     return response;
   } catch (error) {
     console.error('功率统计图数据获取失败:', error);
@@ -375,7 +375,7 @@ export const getStatusNow = async (plantId, deviceSn = '') => {
 export const getPlantVos = async () => {
   try {
     const response = await api.get('/plant/getPlantVos');
-    console.log('用户下所有电站:', response);
+    // console.log('用户下所有电站:', response);
     return response;
   } catch (error) {
     console.error('获取用户下所有电站失败:', error);
@@ -404,7 +404,7 @@ export const getDeviceBySn = async (deviceType, deviceSn) => {
     const response = await api.post('/device/getDeviceBySn', null, {
       params: { deviceType, time, sn:deviceSn }
     })
-    console.log('设备自定义详情信息:', response);
+    // console.log('设备自定义详情信息:', response);
     return response;
 
   } catch (error) {
@@ -418,7 +418,7 @@ export const getAiSystemByPlantId = async (plantId) => {
     const response = await api.get('/aiSystem/getAiSystemByPlantId', {
       params: { plantId }
     })
-    console.log('获取电站AI系统数据:', response);
+    // console.log('获取电站AI系统数据:', response);
     return response;
   } catch (error) {
     console.error('获取电站AI系统数据失败:', error);
@@ -435,7 +435,7 @@ export const setChargerStatus = async (deviceSn, status) => {
         status: status ? 1 : 0 
       }
     });
-    console.log('设置充电器状态:', response);
+    // console.log('设置充电器状态:', response);
     return response;
   } catch (error) {
     console.error('设置充电器状态失败:', error);
@@ -452,7 +452,7 @@ export const setLoadStatus = async (deviceSn, status) => {
         status: status ? 1 : 0 
       }
     });
-    console.log('设置负载状态:', response);
+    // console.log('设置负载状态:', response);
     return response;
   } catch (error) {
     console.error('设置负载状态失败:', error);

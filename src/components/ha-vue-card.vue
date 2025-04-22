@@ -424,7 +424,8 @@ const onPlantChange = async () => {
   try {
     // 1. 先获取能流图数据（包含设备SN等信息）
     const energyFlowData = await fetchEnergyFlowData();
-
+    console.log('[ha-vue-card] 能流对象:', energyChart)
+    energyChart.plantId=selectedPlantId.value
     // 2. 同步请求所有其他数据
     await Promise.all([
       // 更新图表
@@ -463,7 +464,6 @@ onBeforeUnmount(() => {
 const initializeData = async () => {
   try {
     console.log('[ha-vue-card] 开始初始化数据...');
-    
     // 如果还未验证，则直接返回
     if (!isAuthenticated.value) {
       return;
@@ -482,7 +482,6 @@ const initializeData = async () => {
 
       // 3. 获取能流图数据（包含设备SN等信息）
       const energyFlowData = await fetchEnergyFlowData();
-
       // 4. 同步请求所有其他数据
       await Promise.all([
         // 更新图表
@@ -523,10 +522,10 @@ const showConfigurationHelp = () => {
       <li>添加以下配置参数:</li>
     </ol>
     <pre>
-type: 'custom:ha-vue-card'
-name: '能源监控'
-username: '您的用户名'
-password: '您的密码'
+  type: 'custom:ha-vue-card'
+  name: '能源监控'
+  username: '您的用户名'
+  password: '您的密码'
     </pre>
     <p>然后保存配置并刷新页面。</p>
     <p><strong>注意:</strong> 您输入的密码将被自动进行MD5加密后发送到服务器，保障您的账户安全。</p>
@@ -562,10 +561,10 @@ const fetchEnergyFlowData = async () => {
     if (energyFlowData) {
       // 保存设备基本信息
       deviceInfo.value = {
-        batSn: energyFlowData.batSn || '',
-        batType: energyFlowData.batType || '',
-        emSn: energyFlowData.emSn || '',
-        emType: energyFlowData.emType || '',
+        batSn: energyFlowData.batSn || null,
+        batType: energyFlowData.batType || null,
+        emSn: energyFlowData.emSn || null,
+        emType: energyFlowData.emType || null,
         // 添加loadList和chargerList
         loadList: energyFlowData.loadList || [],
         chargerList: energyFlowData.chargerList || []
@@ -629,7 +628,7 @@ const fetchPlantList = async () => {
 
     // 设置默认选中的电站
     if (plantList.value.length > 0) {
-      selectedPlantId.value = plantList.value[3].id;
+      selectedPlantId.value = plantList.value[0].id;
       console.log('[ha-vue-card] 默认选中电站:', selectedPlantId.value);
     }
   } catch (error) {
@@ -740,7 +739,7 @@ let statChart = null;
 const initCharts = () => {
   // 初始化能流图
   if (energyFlowChart.value) {
-    energyChart = new EnergyFlowCanvas(energyFlowChart.value);
+    energyChart = new EnergyFlowCanvas(energyFlowChart.value, selectedPlantId.value);
 
     // 确保容器尺寸正确设置
     const containerWidth = energyFlowChart.value.clientWidth;
@@ -1355,9 +1354,10 @@ const updateCharts = async (energyFlowData) => {
 
 // 更新实体分组数据
 const updateEntityGroups = async () => {
+  // console.log("[ha-vue-card] 更新实体分组数据 ",deviceInfo.value)
   try {
     // 获取逆变器详细信息
-    if (deviceInfo.value.emSn && deviceInfo.value.emType) {
+    if (deviceInfo.value.emSn && deviceInfo.value.emType && !deviceInfo.value.emSn.endsWith('XXXXXX')) {
       try {
         const meterInfo = await getDeviceBySn(deviceInfo.value.emType, deviceInfo.value.emSn);
         deviceDetailInfo.value.meter = meterInfo;
@@ -1436,24 +1436,24 @@ const updateEntityGroupsFromDeviceInfo = () => {
       expanded: false,
       entities: [], // 基本信息
       subGroups: generateBatSubGroups()
-    },
-    {
-      name: 'Meter',
-      expanded: false,
-      entities: [], // 基本信息
-      subGroups: generateMeterSubGroups()
     }
   ];
 
   // 添加设备基本信息到主组
   newGroups[0].entities = [
     {id: 'battery.sn', description: 'SN', value: deviceInfo.value.batSn || 'unknown', unit: ''},
-    // { id: 'battery.type', description: 'TYPE', value: deviceInfo.value.batType || 'unknown', unit: '' }
   ];
-  newGroups[1].entities = [
-    {id: 'meter.sn', description: 'SN', value: deviceInfo.value.emSn || 'unknown', unit: ''},
-    // { id: 'meter.type', description: 'TYPE', value: deviceInfo.value.emType || 'unknown', unit: '' }
-  ];
+// && !deviceInfo.value.emSn.endWith('XXXXXX')
+  if (deviceInfo.value.emSn && deviceInfo.value.emType && !deviceInfo.value.emSn.endsWith('XXXXXX')) {
+    newGroups.push( {
+      name: 'Meter',
+      expanded: false,
+      entities:[
+        {id: 'em.sn', description: 'SN', value: deviceInfo.value.emSn || 'unknown', unit: ''},
+      ],
+      subGroups: generateMeterSubGroups()
+    });
+  }
 
   // 添加Load设备组
   if (deviceInfo.value.loadList && deviceInfo.value.loadList.length > 0) {

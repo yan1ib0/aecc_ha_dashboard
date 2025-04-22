@@ -1,9 +1,10 @@
 import {getEnergyFlowData, getStatusNow, login, stopSessionRenewal} from '../services/api';
 
 class EnergyFlowCanvas {
-    constructor(container) {
+    constructor(container, plantId) {
         this.container = container;
-
+        this.plantId=plantId;
+        console.log('[vue-card-panel] 创建了新的能源流向画布plantId:'+this.plantId)
         // 添加标题元素
         this.titleElement = document.createElement('div');
         this.titleElement.style.textAlign = 'center';
@@ -43,7 +44,7 @@ class EnergyFlowCanvas {
         this.dataRefreshInterval = null;
 
         // 登录并获取数据
-        this.loginAndFetchData();
+        this.loginAndFetchData(plantId);
 
         // 启动数据更新定时器
         this.startDataRefreshTimer();
@@ -524,11 +525,11 @@ class EnergyFlowCanvas {
         this.animationFrameId = requestAnimationFrame(() => this.draw());
     }
 
-    async loginAndFetchData() {
+    async loginAndFetchData(plantId) {
         try {
 
             // 请求并渲染数据
-            await this.fetchData();
+            await this.fetchData(plantId);
         } catch (error) {
             console.error('登录失败:', error);
         } finally {
@@ -537,9 +538,10 @@ class EnergyFlowCanvas {
         }
     }
 
-    async fetchData() {
+    async fetchData(plantId) {
         try {
-            const flowData = await getEnergyFlowData();
+            console.log('开始获取能流图数据...this.plantId'+this.plantId+',plantId'+plantId)
+            const flowData = await getEnergyFlowData(this.plantId?this.plantId:plantId);
             if (flowData) {
                 // console.log('获取到能流图数据:', flowData);
 
