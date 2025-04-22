@@ -1,0 +1,24 @@
+name: HACS Publish
+
+on:
+  push:
+    branches: [ "main" ]
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Validate dist folder
+        run: |
+          if [ ! -d "dist" ]; then exit 1; fi
+          ls -l dist  # 确保包含前端文件
+
+      - name: Create HACS Package
+        run: |
+          mkdir -p dist/hacs
+          cp hacs.json dist/hacs/hacs.json
+          cd dist
+          zip -r ../${{ github.ref_name }}.zip .  # 生成 HACS 可识别的压缩包

@@ -1,9 +1,12 @@
 {
-  "name": "AECC Energy Management System",
-  "render_readme": true,
-  "filename": "vue-card-panel.js",
-  "content_in_root": true,
-  "domains": ["panel_custom"],
-  "iot_class": "calculated",
-  "homeassistant_api": true
-} 
+  "name": "Aecc Dashboard",
+  "description": "AI Energy Control Center for Home Assistant",
+  "type": "frontend",
+  "category": "custom",
+  "version": "1.0.0",
+  "author": "yan1ib0",
+  "repository": "https://github.com/yan1ib0/aecc_ha_dashboard",
+  "data": {
+    "www": "dist"
+  }
+}
