@@ -1,36 +1,67 @@
 <template>
   <div class="panel">
-    <!-- 凭据配置UI -->
-    <div v-if="!isAuthenticated" class="credentials-form">
-      <h2>AECC - 能源监控</h2>
-      <p>请输入您的登录凭据以访问系统</p>
-      <form @submit.prevent="handleLogin">
-        <div class="form-group">
-          <label for="username">用户名:</label>
-          <input id="username" type="text" v-model="credentials.username" required placeholder="请输入用户名">
-        </div>
-        <div class="form-group">
-          <label for="password">密码:</label>
-          <input id="password" type="password" v-model="credentials.password" required placeholder="请输入密码">
-        </div>
-        <div class="form-group">
-          <label class="checkbox-container">
-            <input type="checkbox" v-model="credentials.remember">
-            <span class="checkmark"></span>
-            记住凭据
-          </label>
-        </div>
-        <button type="submit" class="login-button" :disabled="loading">
-          {{ loading ? '登录中...' : '登录' }}
-        </button>
-        <div v-if="errorMessage" class="error-message">{{ errorMessage }}</div>
-      </form>
+    <!-- 主面板内容 -->
+    <div class="header-container">
+      <h2>{{ name }}</h2>
+      <button class="config-button" @click="showConfigDialog = true">
+        <span class="mdi mdi-cog"></span>
+      </button>
     </div>
 
-    <!-- 主面板内容 -->
+    <!-- 配置弹窗 -->
+    <div v-if="showConfigDialog" class="config-dialog-overlay" @click="showConfigDialog = false">
+      <div class="config-dialog" @click.stop>
+        <div class="config-dialog-header">
+          <h3>系统配置</h3>
+          <button class="close-button" @click="showConfigDialog = false">
+            <span class="mdi mdi-close"></span>
+          </button>
+        </div>
+        <div class="config-dialog-content">
+          <form @submit.prevent="handleConfigSubmit">
+            <div class="form-group">
+              <label for="username">用户名:</label>
+              <input id="username" type="text" v-model="credentials.username" required placeholder="请输入用户名">
+            </div>
+            <div class="form-group">
+              <label for="password">密码:</label>
+              <input id="password" type="password" v-model="credentials.password" required placeholder="请输入密码">
+            </div>
+            <!-- <div class="form-group">
+              <label for="api_url">API地址:</label>
+              <input id="api_url" type="text" v-model="credentials.api_url" placeholder="请输入API地址">
+            </div>
+            <div class="form-group">
+              <label for="plant_id">电站ID:</label>
+              <input id="plant_id" type="text" v-model="credentials.plant_id" placeholder="请输入电站ID">
+            </div> -->
+            <!-- <div class="form-group">
+              <label class="checkbox-container">
+                <input type="checkbox" v-model="credentials.remember">
+                <span class="checkmark"></span>
+                记住凭据
+              </label>
+            </div> -->
+            <button type="submit" class="config-submit-button" :disabled="configLoading">
+              {{ configLoading ? '保存中...' : '保存配置' }}
+            </button>
+            <div v-if="configErrorMessage" class="error-message">{{ configErrorMessage }}</div>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <!-- 未认证时显示提示 -->
+    <div v-if="!isAuthenticated" class="auth-prompt">
+      <div class="auth-prompt-content">
+        <span class="mdi mdi-lock"></span>
+        <p>请点击右上角的配置按钮设置系统凭据</p>
+      </div>
+    </div>
+
+    <!-- 已认证时显示内容 -->
     <template v-else>
       <!-- Plant selection card area -->
-      <h2>{{ name }}</h2>
       <div class="plant-selector-card" style="margin-bottom: 16px;">
         <label for="plant-select">Plant:</label>
         <select id="plant-select" v-model="selectedPlantId" @change="onPlantChange">
@@ -205,79 +236,152 @@ const props = defineProps({
   }
 });
 
+// 配置弹窗状态
+const showConfigDialog = ref(false);
+const configLoading = ref(false);
+const configErrorMessage = ref('');
+
 // 登录状态和凭据
 const isAuthenticated = ref(false);
-const loading = ref(false);
-const errorMessage = ref('');
 const credentials = ref({
-  username: localStorage.getItem('aecc_username') || '',
-  password: localStorage.getItem('aecc_password') || '',
-  remember: !!localStorage.getItem('aecc_username')
+  username: '',
+  password: '',
+  api_url: '',
+  plant_id: '',
+  remember: true
 });
 
-// 处理登录
-const handleLogin = async () => {
+// 从hass对象中获取配置
+const loadConfigFromHass = () => {
   try {
-    loading.value = true;
-    errorMessage.value = '';
-    
-    // 对密码进行MD5加密
-    const encryptedPassword = md5(credentials.value.password);
-    
-    // 保存凭据到localStorage（如果选择了记住凭据）
-    if (credentials.value.remember) {
-      localStorage.setItem('aecc_username', credentials.value.username);
-      // 存储加密后的密码
-      localStorage.setItem('aecc_password', encryptedPassword);
-    } else {
-      // 如果不记住，清除localStorage但保持会话内存储
-      localStorage.removeItem('aecc_username');
-      localStorage.removeItem('aecc_password');
+    // 检查hass对象中是否有我们的配置
+    if (props.hass && props.hass.states) {
+      // 尝试从集成配置中获取
+      const integrationConfig = props.hass.states['sensor.aecc_config'];
+      if (integrationConfig && integrationConfig.attributes) {
+        const config = integrationConfig.attributes;
+        credentials.value = {
+          username: config.username || '',
+          password: config.password || '',
+          api_url: config.api_url || '',
+          plant_id: config.plant_id || '',
+          remember: true
+        };
+        return true;
+      }
     }
     
-    // 尝试登录，使用加密后的密码
-    await login(credentials.value.username, encryptedPassword);
+    // 如果没有集成配置，尝试从localStorage获取
+    const storedConfig = localStorage.getItem('aecc_config');
+    if (storedConfig) {
+      const config = JSON.parse(storedConfig);
+      credentials.value = {
+        username: config.username || '',
+        password: config.password || '',
+        api_url: config.api_url || '',
+        plant_id: config.plant_id || '',
+        remember: true
+      };
+      return true;
+    }
+    
+    // 如果都没有，尝试从props.config获取
+    if (props.config) {
+      credentials.value = {
+        username: props.config.username || '',
+        password: props.config.password || '',
+        api_url: props.config.api_url || '',
+        plant_id: props.config.plant_id || '',
+        remember: true
+      };
+      return true;
+    }
+    
+    return false;
+  } catch (error) {
+    console.error('加载配置失败:', error);
+    return false;
+  }
+};
+
+// 保存配置到hass对象
+const saveConfigToHass = async () => {
+  try {
+    // 如果hass对象可用，尝试保存到集成配置中
+    // if (props.hass && props.hass.callService) {
+    //   // 调用服务保存配置
+    //   await props.hass.callService('aecc', 'save_config', {
+    //     username: credentials.value.username,
+    //     password: credentials.value.password,
+    //   });
+    //   console.log('配置已保存到Home Assistant集成');
+    // }
+    
+    // 同时保存到localStorage作为备份
+
+      localStorage.setItem('aecc_config', JSON.stringify({
+        username: credentials.value.username,
+        password: credentials.value.password,
+      }));
+    
+    return true;
+  } catch (error) {
+    console.error('保存配置失败:', error);
+    return false;
+  }
+};
+
+// 处理配置提交
+const handleConfigSubmit = async () => {
+  try {
+    configLoading.value = true;
+    configErrorMessage.value = '';
+    
+    // 保存配置
+    const saved = await saveConfigToHass();
+    if (!saved) {
+      throw new Error('保存配置失败');
+    }
+    
+    // 尝试登录
+    await login(credentials.value.username, credentials.value.password);
     
     // 登录成功
     isAuthenticated.value = true;
+    showConfigDialog.value = false;
     
     // 初始化数据
     await initializeData();
   } catch (error) {
-    errorMessage.value = error.message || '登录失败，请检查用户名和密码';
+    configErrorMessage.value = error.message || '配置保存失败，请检查输入';
     isAuthenticated.value = false;
   } finally {
-    loading.value = false;
+    configLoading.value = false;
   }
 };
 
 // 检查是否已有凭据
 const checkExistingCredentials = async () => {
-  // 从localStorage获取凭据
-  const storedUsername = localStorage.getItem('aecc_username');
-  const storedPassword = localStorage.getItem('aecc_password');
+  // 加载配置
+  const hasConfig = loadConfigFromHass();
   
-  // 如果有存储的凭据，尝试自动登录
-  if (storedUsername && storedPassword) {
+  // 如果有配置，尝试自动登录
+  if (hasConfig && credentials.value.username && credentials.value.password) {
     try {
-      loading.value = true;
       // 检查密码是否已经是MD5加密格式
-      let password = storedPassword;
-      if (storedPassword.length !== 32 || !/^[a-f0-9]{32}$/i.test(storedPassword)) {
-        // 如果不是MD5格式，进行加密并更新localStorage
-        password = md5(storedPassword);
-        localStorage.setItem('aecc_password', password);
+      let password = credentials.value.password;
+      if (password.length !== 32 || !/^[a-f0-9]{32}$/i.test(password)) {
+        // 如果不是MD5格式，进行加密
+        password = md5(password);
+        credentials.value.password = password;
       }
       
-      await login(storedUsername, password);
+      await login(credentials.value.username, password);
       isAuthenticated.value = true;
       await initializeData();
     } catch (error) {
       console.error('自动登录失败:', error);
-      errorMessage.value = '自动登录失败，请重新输入凭据';
       isAuthenticated.value = false;
-    } finally {
-      loading.value = false;
     }
   }
 };
@@ -289,19 +393,10 @@ onBeforeMount(() => {
     window.haCard = {
       config: props.config
     };
-    
-    // 如果配置中有凭据，则直接尝试初始化
-    if (props.config.username && props.config.password) {
-      isAuthenticated.value = true;
-      initializeData();
-    } else {
-      // 否则，检查是否有存储的凭据
-      checkExistingCredentials();
-    }
-  } else {
-    // 没有配置，检查是否有存储的凭据
-    checkExistingCredentials();
   }
+  
+  // 检查是否有存储的凭据
+  checkExistingCredentials();
 });
 
 onMounted(() => {
@@ -1681,7 +1776,6 @@ const fetchAiPlanData = async () => {
   try {
     const aiData = await getAiSystemByPlantId(selectedPlantId.value);
     console.log('[ha-vue-card] 获取AI绿电计划数据:', aiData);
-
     if (aiData) {
       // 根据Python逻辑处理AI状态
       aiPlanState.value = aiData.modeStr
@@ -1699,18 +1793,196 @@ const fetchAiPlanData = async () => {
 </script>
 
 <style scoped>
+/* 全局样式 */
 .panel {
-  height: 100%;
-  width: 100%;
-  padding: 24px;
-  box-sizing: border-box;
-  background-color: var(--primary-background-color);
-  color: var(--primary-text-color);
-  --primary-color: #ff9800;
-  --secondary-color: #ffb74d;
-  --accent-color: #ffd180;
+  padding: 16px;
+  font-family: var(--primary-font-family, Roboto, sans-serif);
+  color: var(--primary-text-color, #333);
+  background-color: var(--card-background-color, #fff);
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
+/* 头部容器样式 */
+.header-container {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+/* 配置按钮样式 */
+.config-button {
+  background-color: var(--primary-color, #4CAF50);
+  color: white;
+  border: none;
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background-color 0.3s;
+}
+
+.config-button:hover {
+  background-color: var(--light-primary-color, #66BB6A);
+}
+
+.config-button .mdi {
+  font-size: 20px;
+}
+
+/* 配置弹窗样式 */
+.config-dialog-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.config-dialog {
+  background-color: var(--card-background-color, #fff);
+  border-radius: 8px;
+  width: 90%;
+  max-width: 500px;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+.config-dialog-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px;
+  border-bottom: 1px solid var(--divider-color, #e0e0e0);
+}
+
+.config-dialog-header h3 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 500;
+}
+
+.close-button {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--secondary-text-color, #757575);
+  font-size: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.close-button:hover {
+  color: var(--primary-text-color, #333);
+}
+
+.config-dialog-content {
+  padding: 16px;
+}
+
+.config-submit-button {
+  width: 100%;
+  padding: 10px;
+  margin-top: 16px;
+  background-color: var(--primary-color, #4CAF50);
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.3s;
+}
+
+.config-submit-button:hover {
+  background-color: var(--light-primary-color, #66BB6A);
+}
+
+.config-submit-button:disabled {
+  background-color: var(--disabled-color, #cccccc);
+  cursor: not-allowed;
+}
+
+/* 未认证提示样式 */
+.auth-prompt {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 200px;
+  background-color: var(--card-background-color, #fff);
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.auth-prompt-content {
+  text-align: center;
+  color: var(--secondary-text-color, #757575);
+}
+
+.auth-prompt-content .mdi {
+  font-size: 48px;
+  margin-bottom: 16px;
+  display: block;
+}
+
+/* 表单样式 */
+.form-group {
+  margin-bottom: 16px;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 8px;
+  font-weight: 500;
+}
+
+.form-group input[type="text"],
+.form-group input[type="password"] {
+  width: 100%;
+  padding: 10px;
+  border: 1px solid var(--divider-color, #e0e0e0);
+  border-radius: 4px;
+  font-size: 14px;
+}
+
+.form-group input[type="text"]:focus,
+.form-group input[type="password"]:focus {
+  border-color: var(--primary-color, #4CAF50);
+  outline: none;
+}
+
+.checkbox-container {
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.checkbox-container input {
+  margin-right: 8px;
+}
+
+.error-message {
+  margin-top: 16px;
+  padding: 10px;
+  background-color: #eb57571a;
+  color: #eb5757;
+  border-radius: 4px;
+  font-size: 14px;
+}
+
+/* 其他现有样式保持不变 */
 .plant-selector-card {
   background: var(--card-background-color);
   border-radius: 8px;

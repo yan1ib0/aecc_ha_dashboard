@@ -15,57 +15,45 @@ const getCredentialsFromConfig = () => {
       if (config.username && config.password) {
         return {
           username: config.username,
-          password: config.password // 配置中的密码假设已经是明文，接口中会进行MD5加密
+          password: config.password, // 配置中的密码假设已经是明文，接口中会进行MD5加密
         };
       }
     }
     
     // 然后尝试从本地存储中获取（适用于panel_custom模式）
-    const storedUsername = localStorage.getItem('aecc_username');
-    const storedPassword = localStorage.getItem('aecc_password');
-    
-    if (storedUsername && storedPassword) {
+    const storedConfig = localStorage.getItem('aecc_config');
+    if (storedConfig) {
+      const config = JSON.parse(storedConfig);
+      console.log('从本地存储中获取凭据:', config)
       return {
-        username: storedUsername,
-        password: storedPassword // localStorage中的密码已经是MD5加密后的
+        username: config.username || '',
+        password: config.password || '', // localStorage中的密码已经是MD5加密后的
       };
     }
     
-    // 尝试从URL参数获取（开发调试用）
-    const urlParams = new URLSearchParams(window.location.search);
-    const urlUsername = urlParams.get('username');
-    const urlPassword = urlParams.get('password');
-    
-    if (urlUsername && urlPassword) {
-      // 存储到本地存储以便后续使用，URL参数中的密码为明文，需要MD5加密
-      localStorage.setItem('aecc_username', urlUsername);
-      
-      // 对URL参数中的密码进行MD5加密
-      try {
-        // 这里我们假设前端已经定义了md5函数
-        if (typeof window.md5 === 'function') {
-          const encryptedPassword = window.md5(urlPassword);
-          localStorage.setItem('aecc_password', encryptedPassword);
-        } else {
-          // 如果没有md5函数，则直接存储（不推荐）
-          localStorage.setItem('aecc_password', urlPassword);
-        }
-      } catch (e) {
-        console.error('MD5加密密码失败:', e);
-        localStorage.setItem('aecc_password', urlPassword);
-      }
-      
-      return {
-        username: urlUsername,
-        password: urlPassword // URL中的密码是明文，接口中会进行MD5加密
-      };
-    }
+    // // 尝试从URL参数获取（开发调试用）
+    // const urlParams = new URLSearchParams(window.location.search);
+    // const urlUsername = urlParams.get('username');
+    // const urlPassword = urlParams.get('password');
+    //
+    // if (urlUsername && urlPassword) {
+    //   // 存储到本地存储以便后续使用，URL参数中的密码为明文，需要MD5加密
+    //   localStorage.setItem('aecc_config', JSON.stringify({
+    //     username: urlUsername,
+    //     password: urlPassword,
+    //   }));
+    //
+    //   return {
+    //     username: urlUsername,
+    //     password: urlPassword, // URL中的密码是明文，接口中会进行MD5加密
+    //   };
+    // }
   } catch (error) {
     console.error('获取凭据时出错:', error);
   }
   
   // 如果都找不到，返回空值
-  return { username: '', password: '' };
+  return { username: '', password: ''};
 };
 
 // 获取Home Assistant系统语言
@@ -89,6 +77,12 @@ const getHaLanguage = () => {
 
 // 动态确定baseURL
 const getBaseUrl = () => {
+  // 从配置中获取API URL
+  const credentials = getCredentialsFromConfig();
+  if (credentials.api_url) {
+    return credentials.api_url;
+  }
+  
   // 开发环境使用代理
   if (isDevelopment) {
     return '/api';
@@ -216,6 +210,7 @@ export const login = async (username, password) => {
   try {
     // 如果未提供username和password，尝试从配置中获取
     const credentials = getCredentialsFromConfig();
+    console.log(credentials)
     const loginUsername = username || credentials.username;
     let loginPassword = password || credentials.password;
     
@@ -340,12 +335,15 @@ export const stopSessionRenewal = () => {
 
 
 // 获取能源流向数据   主页数据
-export const getEnergyFlowData = async (plantId = 1102) => {
+export const getEnergyFlowData = async (plantId) => {
   try {
+    // 如果没有提供plantId，尝试从配置中获取
+    const credentials = getCredentialsFromConfig();
+    const targetPlantId = plantId || credentials.plant_id || 1102;
+    
     // 使用params方式传递参数
-    // console.log('能源流向数据:', response);
     return await api.post('/energy/getHomeCountData', null, {
-      params: {plantId}
+      params: {plantId: targetPlantId}
     });
   } catch (error) {
     console.error('获取能源流向数据失败:', error);
@@ -354,14 +352,16 @@ export const getEnergyFlowData = async (plantId = 1102) => {
 };
 
 // 获取功率数据 渲染功率曲线图
-export const getStatusNow = async (plantId = 1102, deviceSn = '') => {
+export const getStatusNow = async (plantId, deviceSn = '') => {
   try {
+    // 如果没有提供plantId，尝试从配置中获取
+    const credentials = getCredentialsFromConfig();
+    const targetPlantId = plantId || credentials.plant_id || 1102;
+    
     //当日 yyyy-MM-dd
     const time = new Date().toISOString().split('T')[0];
     const response = await api.post('/energy/getEnergyDataDay', null, {
-
-      params: { plantId, time, deviceSn }
-      // params: { plantId, time:'2025-04-16' , deviceSn }
+      params: { plantId: targetPlantId, time, deviceSn }
     });
     console.log('功率统计图数据:', response);
     return response;
