@@ -28,7 +28,7 @@ export default defineConfig({
     lib: {
       entry: "src/my-ha-vue-card.js",
       name: "HaVueCard",
-      fileName: "my-ha-vue-card",
+      fileName: "aecc-ha-panel",
     },
   },
   server: {

@@ -2,12 +2,12 @@
   "name": "aemc-energy-management",
   "version": "1.0.0",
   "description": "AECC Energy Management System for Home Assistant",
-  "main": "vue-card-panel.js",
+  "main": "aecc-ha-panel.js",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
     "build:ha": "vite build --target esnext",
-    "build:hacs": "vite build --target esnext && cp dist/vue-card-panel.js . && cp dist/vue-card-panel.js.map .",
+    "build:hacs": "vite build --target esnext",
     "preview": "vite preview"
   },
   "keywords": [
