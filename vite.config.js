@@ -26,10 +26,28 @@ export default defineConfig({
     target: 'esnext',
     polyfillDynamicImport: false,
     lib: {
-      entry: "src/my-ha-vue-card.js",
+      entry: "src/hapack.js",
       name: "HaVueCard",
       fileName: "aecc-ha-panel",
     },
+    rollupOptions: {
+      external: [],
+      output: {
+        // 在 UMD 构建模式下为这些外部化的依赖提供一个全局变量
+        // 强制内联语言文件
+        inlineDynamicImports: true,
+        manualChunks: undefined, // 禁用代码分割，确保所有内容打包到一个文件
+      }
+    },
+    assetsInlineLimit: 100000000, // 增大内联资源限制，确保所有资源都被内联
+    cssCodeSplit: false, // 禁用CSS代码分割
+    minify: 'terser',
+    terserOptions: {
+      compress: {
+        drop_console: false, // 保留控制台日志用于调试
+      },
+    },
+    sourcemap: false,
   },
   server: {
     proxy: {

@@ -1,7 +1,7 @@
 import {getEnergyFlowData, getStatusNow, login, stopSessionRenewal} from '../services/api';
 
 class EnergyFlowCanvas {
-    constructor(container, plantId) {
+    constructor(container, plantId,title) {
         this.container = container;
         this.plantId=plantId;
         console.log('[vue-card-panel] 创建了新的能源流向画布plantId:'+this.plantId)
@@ -10,7 +10,7 @@ class EnergyFlowCanvas {
         this.titleElement.style.textAlign = 'center';
         this.titleElement.style.color = 'var(--primary-text-color)';
         this.titleElement.style.marginBottom = '16px';
-        this.titleElement.textContent = 'Energy Flow';
+        this.titleElement.textContent = title;
         this.container.appendChild(this.titleElement);
         this.iconMap = {
             'Grid': 'mdi:transmission-tower',

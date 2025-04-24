@@ -2,7 +2,7 @@
   <div class="panel">
     <!-- 主面板内容 -->
     <div class="header-container">
-      <h2>{{ name }}</h2>
+      <h2>{{ t('panel.title') }}</h2>
       <button class="config-button" @click="showConfigDialog = true">
         <span class="mdi mdi-cog"></span>
       </button>
@@ -12,7 +12,7 @@
     <div v-if="showConfigDialog" class="config-dialog-overlay" @click="showConfigDialog = false">
       <div class="config-dialog" @click.stop>
         <div class="config-dialog-header">
-          <h3>系统配置</h3>
+          <h3>{{ t('panel.config.dialog_title') }}</h3>
           <button class="close-button" @click="showConfigDialog = false">
             <span class="mdi mdi-close"></span>
           </button>
@@ -20,30 +20,18 @@
         <div class="config-dialog-content">
           <form @submit.prevent="handleConfigSubmit">
             <div class="form-group">
-              <label for="username">用户名:</label>
-              <input id="username" type="text" v-model="credentials.username" required placeholder="请输入用户名">
+              <label for="username">{{ t('panel.config.username') }}</label>
+              <input id="username" type="text" v-model="credentials.username" required
+                     :placeholder="t('panel.config.username_placeholder')">
             </div>
             <div class="form-group">
-              <label for="password">密码:</label>
-              <input id="password" type="password" v-model="credentials.password" required placeholder="请输入密码">
+              <label for="password">{{ t('panel.config.password') }}</label>
+              <input id="password" type="password" v-model="credentials.password" required
+                     :placeholder="t('panel.config.password_placeholder')">
             </div>
-            <!-- <div class="form-group">
-              <label for="api_url">API地址:</label>
-              <input id="api_url" type="text" v-model="credentials.api_url" placeholder="请输入API地址">
-            </div>
-            <div class="form-group">
-              <label for="plant_id">电站ID:</label>
-              <input id="plant_id" type="text" v-model="credentials.plant_id" placeholder="请输入电站ID">
-            </div> -->
-            <!-- <div class="form-group">
-              <label class="checkbox-container">
-                <input type="checkbox" v-model="credentials.remember">
-                <span class="checkmark"></span>
-                记住凭据
-              </label>
-            </div> -->
+
             <button type="submit" class="config-submit-button" :disabled="configLoading">
-              {{ configLoading ? '保存中...' : '保存配置' }}
+              {{ configLoading ? t('panel.config.saving') : t('panel.config.save') }}
             </button>
             <div v-if="configErrorMessage" class="error-message">{{ configErrorMessage }}</div>
           </form>
@@ -55,7 +43,7 @@
     <div v-if="!isAuthenticated" class="auth-prompt">
       <div class="auth-prompt-content">
         <span class="mdi mdi-lock"></span>
-        <p>请点击右上角的配置按钮设置系统凭据</p>
+        <p>{{ t('panel.auth_prompt.message') }}</p>
       </div>
     </div>
 
@@ -63,7 +51,7 @@
     <template v-else>
       <!-- Plant selection card area -->
       <div class="plant-selector-card" style="margin-bottom: 16px;">
-        <label for="plant-select">Plant:</label>
+        <label for="plant-select">{{ t('plant.label') }}</label>
         <select id="plant-select" v-model="selectedPlantId" @change="onPlantChange">
           <option v-for="plant in plantList" :key="plant.id" :value="plant.id">
             {{ plant.plantName }}
@@ -73,24 +61,26 @@
 
       <!-- AI Green Power Plan Card -->
       <div class="ai-plan-card" style="margin-bottom: 16px;">
-        <label>AI Green Plan:</label>
+        <label>{{ t('ai_plan.label') }}</label>
         <div class="ai-plan-value">{{ aiPlanState }}</div>
       </div>
 
       <div class="content">
         <!-- Energy Flow Chart -->
         <div class="chart-container energy-flow-container">
+          <h3 class="chart-title">{{ t('chart.energy_flow') }}</h3>
           <div ref="energyFlowChart" class="chart"></div>
         </div>
 
         <!-- Statistics Chart -->
         <div class="chart-container" style="padding-bottom: 5% !important;">
+          <h3 class="chart-title">{{ t('chart.statistics') }}</h3>
           <div ref="statsChart" class="chart"></div>
         </div>
 
         <!-- Entity Data Accordion Component -->
         <div class="entities-container">
-          <h2 class="section-title">Device Details</h2>
+          <h2 class="section-title">{{ t('device.details') }}</h2>
           <div v-for="(group, groupIndex) in entityGroups" :key="groupIndex" class="entity-group">
             <div class="group-header" @click="toggleGroup(groupIndex)">
               <span>{{ group.name }}</span>
@@ -106,19 +96,22 @@
                 <div class="entity-value-container">
                   <div class="entity-value">{{ entity.value }}{{ entity.unit }}</div>
                   <!-- 为Load和Charger设备添加开关按钮 -->
-                  <div v-if="group.name === 'Load Devices' || group.name === 'Charger Devices'" class="device-switch-container">
-                    <button 
-                      class="device-switch-button" 
-                      :class="{ 'on': entity.switchStatus === 1, 'off': entity.switchStatus === 0 }"
-                      @click="group.name === 'Load Devices' ? toggleLoad(entity.value) : toggleCharger(entity.value)"
-                    >
-                      {{ entity.switchStatus === 1 ? 'ON' : 'OFF' }}
-                    </button>
+                  <div v-if="group.name === 'Load Devices' || group.name === 'Charger Devices'"
+                       class="device-switch-container">
+                    <label class="switch">
+                      <input type="checkbox" :checked="entity.switchStatus === 1"
+                             @change="group.name === 'Load Devices' ? toggleLoad(entity.value) : toggleCharger(entity.value)">
+                      <span class="slider round"></span>
+                      <span class="switch-label">{{
+                          entity.switchStatus === 1 ? t('entity_groups.switch.on') :
+                              t('entity_groups.switch.off')
+                        }}</span>
+                    </label>
                   </div>
                 </div>
               </div>
 
-              <h3 class="sub-section-title">Details</h3>
+              <h3 class="sub-section-title">{{ t('device.detail_section') }}</h3>
               <div v-for="(subGroup, subIndex) in group.subGroups" :key="subIndex" class="entity-subgroup">
                 <div class="subgroup-header" @click="toggleGroup(groupIndex, subIndex)">
                   <span>{{ subGroup.name }}</span>
@@ -140,14 +133,14 @@
 
         <!-- Energy Summary Cards -->
         <div class="energy-summary-container">
-          <h2 class="section-title">Energy (kWh)</h2>
+          <h2 class="section-title">{{ t('energy.title') }}</h2>
           <div class="energy-summary-grid">
             <div class="energy-summary-card solar">
               <div class="energy-summary-icon">
                 <span class="mdi mdi-solar-power"></span>
               </div>
               <div class="energy-summary-content">
-                <div class="energy-summary-title">Solar Energy</div>
+                <div class="energy-summary-title">{{ t('energy.solar') }}</div>
                 <div class="energy-summary-value">{{ energySummary.solarDayElec.toFixed(2) }}</div>
               </div>
             </div>
@@ -156,7 +149,7 @@
                 <span class="mdi mdi-power-plug"></span>
               </div>
               <div class="energy-summary-content">
-                <div class="energy-summary-title">Grid Energy</div>
+                <div class="energy-summary-title">{{ t('energy.grid') }}</div>
                 <div class="energy-summary-value">{{ energySummary.gridDayElec.toFixed(2) }}</div>
               </div>
             </div>
@@ -165,7 +158,7 @@
                 <span class="mdi mdi-lightning-bolt"></span>
               </div>
               <div class="energy-summary-content">
-                <div class="energy-summary-title">Load Energy</div>
+                <div class="energy-summary-title">{{ t('energy.load') }}</div>
                 <div class="energy-summary-value">{{ energySummary.loadDayElec.toFixed(2) }}</div>
               </div>
             </div>
@@ -174,7 +167,7 @@
                 <span class="mdi mdi-battery"></span>
               </div>
               <div class="energy-summary-content">
-                <div class="energy-summary-title">Battery Energy</div>
+                <div class="energy-summary-title">{{ t('energy.battery') }}</div>
                 <div class="energy-summary-value">{{ energySummary.batteryDayElec.toFixed(2) }}</div>
               </div>
             </div>
@@ -183,7 +176,7 @@
                 <span class="mdi mdi-power-plug-outline"></span>
               </div>
               <div class="energy-summary-content">
-                <div class="energy-summary-title">Grid Buy</div>
+                <div class="energy-summary-title">{{ t('energy.grid_buy') }}</div>
                 <div class="energy-summary-value">{{ energySummary.gridBuyDayElec.toFixed(2) }}</div>
               </div>
             </div>
@@ -192,7 +185,7 @@
                 <span class="mdi mdi-battery-charging"></span>
               </div>
               <div class="energy-summary-content">
-                <div class="energy-summary-title">Battery Discharge</div>
+                <div class="energy-summary-title">{{ t('energy.battery_discharge') }}</div>
                 <div class="energy-summary-value">{{ energySummary.batteryDischargeDayElec.toFixed(2) }}</div>
               </div>
             </div>
@@ -204,7 +197,17 @@
 </template>
 
 <script setup>
-import {nextTick, onBeforeMount, onBeforeUnmount, onBeforeUpdate, onMounted, onUpdated, ref} from 'vue';
+import {
+  nextTick,
+  watchEffect,
+  provide,
+  onBeforeMount,
+  onBeforeUnmount,
+  onBeforeUpdate,
+  onMounted,
+  onUpdated,
+  ref
+} from 'vue';
 import * as echarts from 'echarts';
 import '@mdi/font/css/materialdesignicons.css';
 import EnergyFlowCanvas from './energy-flow-canvas';
@@ -219,7 +222,9 @@ import {
   setChargerStatus,
   setLoadStatus
 } from '../services/api';
+import {I18nInjectionKey, useI18n, createI18n} from "vue-i18n";
 
+console.log('加载到ha-panel')
 // 将md5函数暴露到全局，以便api.js使用
 window.md5 = md5;
 
@@ -233,7 +238,8 @@ const props = defineProps({
   config: {
     type: Object,
     default: () => ({})
-  }
+  },
+  locale: String
 });
 
 // 配置弹窗状态
@@ -251,6 +257,43 @@ const credentials = ref({
   remember: true
 });
 
+//i18n
+
+// console.log('加载到i18nHost')
+
+// const props = defineProps({});
+
+//国际化
+import en from '../locales/en.json'
+import zhCN from '../locales/zh-CN.json'
+
+// const messages = {'en': en, 'zh': zhCN}
+// const i18n = createI18n({
+//   locale: 'en',
+//   messages,
+  // legacy: false,
+  // fallbackLocale: 'en',
+  // globalInjection: true,
+  // useScope: 'global'
+// })
+// props.locale = 'en'
+// // 通过 provide 注入 i18n
+// // console.log('i18n注册中.')
+// // provide(I18nInjectionKey, ci18n)
+const i18n = useI18n()
+console.log('i18n获取完毕:', i18n)
+//获取 i18n的所有翻译
+// console.log(i18n.messages.value)
+// watchEffect(() => {
+//   i18n.locale.value = props.locale
+// })
+
+const {t,locale} = i18n
+console.log('locale:', locale.value)
+console.log('messages:', i18n.messages.value)
+console.log(t('title'))
+console.log(t('panel.title'))
+// console.log('t:', t)
 // 从hass对象中获取配置
 const loadConfigFromHass = () => {
   try {
@@ -270,7 +313,7 @@ const loadConfigFromHass = () => {
         return true;
       }
     }
-    
+
     // 如果没有集成配置，尝试从localStorage获取
     const storedConfig = localStorage.getItem('aecc_config');
     if (storedConfig) {
@@ -284,7 +327,7 @@ const loadConfigFromHass = () => {
       };
       return true;
     }
-    
+
     // 如果都没有，尝试从props.config获取
     if (props.config) {
       credentials.value = {
@@ -296,7 +339,7 @@ const loadConfigFromHass = () => {
       };
       return true;
     }
-    
+
     return false;
   } catch (error) {
     console.error('加载配置失败:', error);
@@ -316,14 +359,14 @@ const saveConfigToHass = async () => {
     //   });
     //   console.log('配置已保存到Home Assistant集成');
     // }
-    
+
     // 同时保存到localStorage作为备份
 
-      localStorage.setItem('aecc_config', JSON.stringify({
-        username: credentials.value.username,
-        password: credentials.value.password,
-      }));
-    
+    localStorage.setItem('aecc_config', JSON.stringify({
+      username: credentials.value.username,
+      password: credentials.value.password,
+    }));
+
     return true;
   } catch (error) {
     console.error('保存配置失败:', error);
@@ -336,20 +379,20 @@ const handleConfigSubmit = async () => {
   try {
     configLoading.value = true;
     configErrorMessage.value = '';
-    
+
     // 保存配置
     const saved = await saveConfigToHass();
     if (!saved) {
       throw new Error('保存配置失败');
     }
-    
+
     // 尝试登录
     await login(credentials.value.username, credentials.value.password);
-    
+
     // 登录成功
     isAuthenticated.value = true;
     showConfigDialog.value = false;
-    
+
     // 初始化数据
     await initializeData();
   } catch (error) {
@@ -364,7 +407,7 @@ const handleConfigSubmit = async () => {
 const checkExistingCredentials = async () => {
   // 加载配置
   const hasConfig = loadConfigFromHass();
-  
+
   // 如果有配置，尝试自动登录
   if (hasConfig && credentials.value.username && credentials.value.password) {
     try {
@@ -375,7 +418,7 @@ const checkExistingCredentials = async () => {
         password = md5(password);
         credentials.value.password = password;
       }
-      
+
       await login(credentials.value.username, password);
       isAuthenticated.value = true;
       await initializeData();
@@ -394,7 +437,7 @@ onBeforeMount(() => {
       config: props.config
     };
   }
-  
+
   // 检查是否有存储的凭据
   checkExistingCredentials();
 });
@@ -411,8 +454,9 @@ onMounted(() => {
       attributes: state.attributes
     })));
   }
-
-  // 添加窗口大小变化监听
+  localStorage.setItem('language', props.hass.config ? props.hass.config.language.split("-")[0] + "-" + props.hass.config.country : 'en-US')
+  // console.log('i18n.loacle:', i18n.locale)
+  props.locale = localStorage.getItem('language')// 添加窗口大小变化监听
   window.addEventListener('resize', handleResize);
 });
 
@@ -425,7 +469,7 @@ const onPlantChange = async () => {
     // 1. 先获取能流图数据（包含设备SN等信息）
     const energyFlowData = await fetchEnergyFlowData();
     console.log('[ha-vue-card] 能流对象:', energyChart)
-    energyChart.plantId=selectedPlantId.value
+    energyChart.plantId = selectedPlantId.value
     // 2. 同步请求所有其他数据
     await Promise.all([
       // 更新图表
@@ -468,7 +512,7 @@ const initializeData = async () => {
     if (!isAuthenticated.value) {
       return;
     }
-    
+
     // 登录，不再传递硬编码的用户名和密码，而是依赖API从配置中获取
     await login();
     // 1. 首先获取电站列表
@@ -530,7 +574,7 @@ const showConfigurationHelp = () => {
     <p>然后保存配置并刷新页面。</p>
     <p><strong>注意:</strong> 您输入的密码将被自动进行MD5加密后发送到服务器，保障您的账户安全。</p>
   `;
-  
+
   // 查找panel元素并添加帮助信息
   const panel = document.querySelector('.panel');
   if (panel) {
@@ -578,7 +622,7 @@ const fetchEnergyFlowData = async () => {
       if (energyFlowData) {
         simulatedData.value = {
           gridPower: energyFlowData.gridPower || '0W',
-          solarPower: energyFlowData.solarPower ||'0W',
+          solarPower: energyFlowData.solarPower || '0W',
           batPower: energyFlowData.batPower || '0W',
           loadPower: energyFlowData.loadPower || '0W',
           chargerPower: energyFlowData.chargerPower || '0W',
@@ -646,7 +690,7 @@ const attributeChangedCallback = (name, oldValue, newValue) => {
   console.log(`[ha-vue-card] 属性${name}已更新:`, oldValue, '->', newValue);
 };
 
-const name = ref(props.config.name || 'AECC Energy Management System Dashboard');
+// const name = ref(props.config.name || 'AECC Energy Management System Dashboard');
 const energyFlowChart = ref(null);
 const statsChart = ref(null);
 
@@ -1432,7 +1476,7 @@ const updateEntityGroupsFromDeviceInfo = () => {
   // 创建新的实体组
   const newGroups = [
     {
-      name: 'Battery',
+      name: t('device.battery'),
       expanded: false,
       entities: [], // 基本信息
       subGroups: generateBatSubGroups()
@@ -1443,12 +1487,12 @@ const updateEntityGroupsFromDeviceInfo = () => {
   newGroups[0].entities = [
     {id: 'battery.sn', description: 'SN', value: deviceInfo.value.batSn || 'unknown', unit: ''},
   ];
-// && !deviceInfo.value.emSn.endWith('XXXXXX')
+  // && !deviceInfo.value.emSn.endWith('XXXXXX')
   if (deviceInfo.value.emSn && deviceInfo.value.emType && !deviceInfo.value.emSn.endsWith('XXXXXX')) {
-    newGroups.push( {
-      name: 'Meter',
+    newGroups.push({
+      name: t('device.meter'),
       expanded: false,
-      entities:[
+      entities: [
         {id: 'em.sn', description: 'SN', value: deviceInfo.value.emSn || 'unknown', unit: ''},
       ],
       subGroups: generateMeterSubGroups()
@@ -1458,7 +1502,7 @@ const updateEntityGroupsFromDeviceInfo = () => {
   // 添加Load设备组
   if (deviceInfo.value.loadList && deviceInfo.value.loadList.length > 0) {
     newGroups.push({
-      name: 'Load Devices',
+      name: t('device.load'),
       expanded: false,
       entities: deviceInfo.value.loadList.map(load => ({
         id: `load.${load.deviceSn}`,
@@ -1474,7 +1518,7 @@ const updateEntityGroupsFromDeviceInfo = () => {
   // 添加Charger设备组
   if (deviceInfo.value.chargerList && deviceInfo.value.chargerList.length > 0) {
     newGroups.push({
-      name: 'Charger Devices',
+      name: t('device.charger'),
       expanded: false,
       entities: deviceInfo.value.chargerList.map(charger => ({
         id: `charger.${charger.deviceSn}`,
@@ -1701,7 +1745,7 @@ const setConfig = (config) => {
   if (config) {
     console.log('[ha-vue-card] 当前配置:', config);
     name.value = config.name || 'Vue Card';
-    
+
     // 保存配置到全局变量
     if (typeof window !== 'undefined') {
       window.haCard = {
@@ -1769,26 +1813,81 @@ const deviceDetailInfo = ref({
 });
 
 // AI绿电计划状态
-const aiPlanState = ref('Loading...');
+const aiPlanState = ref();
+aiPlanState.value = t('state.loading')
 
 // 获取AI绿电计划数据
 const fetchAiPlanData = async () => {
   try {
     const aiData = await getAiSystemByPlantId(selectedPlantId.value);
-    console.log('[ha-vue-card] 获取AI绿电计划数据:', aiData);
+    console.log(t('logs.energy_flow_object'), aiData);
     if (aiData) {
       // 根据Python逻辑处理AI状态
       aiPlanState.value = aiData.modeStr
     } else {
-      aiPlanState.value = "No Data";
+      aiPlanState.value = t('state.no_data');
     }
   } catch (error) {
-    console.error('[ha-vue-card] 获取AI绿电计划数据失败:', error);
-    aiPlanState.value = "Error";
+    console.error(t('errors.initialize_data_failed'), error);
+    aiPlanState.value = t('state.error');
   }
 };
 
+// 控制Load设备开关
+const toggleLoad = async (deviceSn) => {
+  try {
+    // 找到对应的设备
+    const loadDevice = deviceInfo.value.loadList.find(load => load.deviceSn === deviceSn);
+    if (!loadDevice) {
+      console.error(`[ha-vue-card] 未找到Load设备: ${deviceSn}`);
+      return;
+    }
 
+    // 切换状态 (0 -> 1 或 1 -> 0)
+    const newStatus = loadDevice.switchStatus === 1 ? 0 : 1;
+
+    // 调用API设置状态
+    await setLoadStatus(deviceSn, newStatus);
+
+    // 更新本地状态
+    loadDevice.switchStatus = newStatus;
+
+    // 更新UI
+    updateEntityGroupsFromDeviceInfo();
+
+    console.log(`[ha-vue-card] 切换Load设备 ${deviceSn} 状态为: ${newStatus}`);
+  } catch (error) {
+    console.error(`[ha-vue-card] 切换Load设备状态失败:`, error);
+  }
+};
+
+// 控制Charger设备开关
+const toggleCharger = async (deviceSn) => {
+  try {
+    // 找到对应的设备
+    const chargerDevice = deviceInfo.value.chargerList.find(charger => charger.deviceSn === deviceSn);
+    if (!chargerDevice) {
+      console.error(`[ha-vue-card] 未找到Charger设备: ${deviceSn}`);
+      return;
+    }
+
+    // 切换状态 (0 -> 1 或 1 -> 0)
+    const newStatus = chargerDevice.switchStatus === 1 ? 0 : 1;
+
+    // 调用API设置状态
+    await setChargerStatus(deviceSn, newStatus);
+
+    // 更新本地状态
+    chargerDevice.switchStatus = newStatus;
+
+    // 更新UI
+    updateEntityGroupsFromDeviceInfo();
+
+    console.log(`[ha-vue-card] 切换Charger设备 ${deviceSn} 状态为: ${newStatus}`);
+  } catch (error) {
+    console.error(`[ha-vue-card] 切换Charger设备状态失败:`, error);
+  }
+};
 
 </script>
 
@@ -2031,14 +2130,17 @@ h1 {
 
 /* 能流图容器 */
 .energy-flow-container {
-  height: 0; /* 使用 padding-bottom 技巧必须设置 height 为 0 或 auto */
-  min-height: 250px; /* 保留最小高度 */
+  height: 0;
+  /* 使用 padding-bottom 技巧必须设置 height 为 0 或 auto */
+  min-height: 250px;
+  /* 保留最小高度 */
   /* --- 设置外部容器的视觉宽高比为 9:10 --- */
   padding-bottom: 90% !important;
   position: relative;
   width: 100%;
   box-sizing: border-box;
-  overflow: hidden; /* 隐藏可能超出容器的内容，虽然理论上不应超出 */
+  overflow: hidden;
+  /* 隐藏可能超出容器的内容，虽然理论上不应超出 */
 }
 
 /* 内部 chart (Canvas 的父 div) 占据容器 */
@@ -2047,7 +2149,8 @@ h1 {
   top: 0;
   left: 0;
   width: 100%;
-  height: 100%; /* 撑满由 padding-bottom 创建的空间 */
+  height: 100%;
+  /* 撑满由 padding-bottom 创建的空间 */
   box-sizing: border-box;
 }
 
@@ -2213,7 +2316,8 @@ h1 {
     padding-bottom: 120% !important;
     width: 100%;
     box-sizing: border-box;
-    overflow: hidden; /* 防止内容溢出 */
+    overflow: hidden;
+    /* 防止内容溢出 */
   }
 
   .chart {
@@ -2325,29 +2429,35 @@ h1 {
 @media (max-width: 600px) {
   .energy-summary-grid {
     grid-template-columns: repeat(2, 1fr);
-    gap: 8px; /* 在移动端减小间距 */
+    gap: 8px;
+    /* 在移动端减小间距 */
   }
-  
+
   .energy-summary-card {
-    padding: 10px; /* 在移动端减小内边距 */
+    padding: 10px;
+    /* 在移动端减小内边距 */
   }
-  
+
   .energy-summary-icon {
-    width: 40px; /* 在移动端减小图标尺寸 */
+    width: 40px;
+    /* 在移动端减小图标尺寸 */
     height: 40px;
     margin-right: 10px;
   }
-  
+
   .energy-summary-icon .mdi {
-    font-size: 20px; /* 在移动端减小图标字体大小 */
+    font-size: 20px;
+    /* 在移动端减小图标字体大小 */
   }
-  
+
   .energy-summary-title {
-    font-size: 12px; /* 在移动端减小标题字体大小 */
+    font-size: 12px;
+    /* 在移动端减小标题字体大小 */
   }
-  
+
   .energy-summary-value {
-    font-size: 18px; /* 在移动端减小数值字体大小 */
+    font-size: 18px;
+    /* 在移动端减小数值字体大小 */
   }
 }
 
@@ -2380,14 +2490,86 @@ h1 {
   text-align: center;
 }
 
-/* 设备开关样式 */
-.device-switch {
-  --mdc-switch-selected-track-color: var(--primary-color);
-  --mdc-switch-selected-handle-color: var(--primary-color);
-  --mdc-switch-unselected-track-color: var(--disabled-text-color);
-  --mdc-switch-unselected-handle-color: var(--disabled-text-color);
+/* 设备开关样式 - 滑动开关 */
+.device-switch-container {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 8px;
 }
 
+/* 开关容器 */
+.switch {
+  position: relative;
+  display: inline-block;
+  width: 50px;
+  height: 24px;
+  margin-right: 8px;
+}
+
+/* 隐藏默认的checkbox */
+.switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+/* 滑块 */
+.slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: #ccc;
+  transition: .4s;
+}
+
+/* 滑块上的圆形按钮 */
+.slider:before {
+  position: absolute;
+  content: "";
+  height: 16px;
+  width: 16px;
+  left: 4px;
+  bottom: 4px;
+  background-color: white;
+  transition: .4s;
+}
+
+/* 选中状态 */
+input:checked + .slider {
+  background-color: var(--primary-color, #4CAF50);
+}
+
+input:focus + .slider {
+  box-shadow: 0 0 1px var(--primary-color, #4CAF50);
+}
+
+/* 选中状态下滑块移动 */
+input:checked + .slider:before {
+  transform: translateX(26px);
+}
+
+/* 圆角滑块 */
+.slider.round {
+  border-radius: 24px;
+}
+
+.slider.round:before {
+  border-radius: 50%;
+}
+
+/* 开关标签 */
+.switch-label {
+  margin-left: 60px;
+  line-height: 24px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--primary-text-color);
+}
+
+/* 子组标题样式 */
 .sub-group-header {
   display: flex;
   justify-content: space-between;
@@ -2403,76 +2585,40 @@ h1 {
   color: var(--primary-text-color);
 }
 
-.device-switch-container {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-top: 8px;
-}
-
-.device-switch-button {
-  --mdc-switch-selected-track-color: var(--primary-color);
-  --mdc-switch-selected-handle-color: var(--primary-color);
-  --mdc-switch-unselected-track-color: var(--disabled-text-color);
-  --mdc-switch-unselected-handle-color: var(--disabled-text-color);
-}
-
-.device-switch-button.on {
-  background-color: var(--primary-color);
-  color: white;
-}
-
-.device-switch-button.off {
-  background-color: var(--disabled-text-color);
-  color: var(--primary-text-color);
-}
-
 .entity-value-container {
   display: flex;
   flex-direction: column;
   align-items: flex-end;
 }
 
-.device-switch-container {
-  display: flex;
-  justify-content: flex-end;
-  margin-top: 8px;
-}
-
-.device-switch-button {
-  padding: 4px 12px;
-  border-radius: 4px;
-  font-size: 12px;
-  font-weight: 500;
-  cursor: pointer;
-  border: none;
-  transition: all 0.3s ease;
-  min-width: 60px;
-  text-align: center;
-}
-
-.device-switch-button.on {
-  background-color: #4CAF50;
-  color: white;
-  box-shadow: 0 2px 4px rgba(76, 175, 80, 0.3);
-}
-
-.device-switch-button.off {
-  background-color: #9E9E9E;
-  color: white;
-  box-shadow: 0 2px 4px rgba(158, 158, 158, 0.3);
-}
-
+/* 移除旧的按钮样式 */
+.device-switch-button,
+.device-switch-button.on,
+.device-switch-button.off,
 .device-switch-button:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+  display: none;
 }
 
 @media (max-width: 600px) {
-  .device-switch-button {
-    padding: 3px 10px;
-    font-size: 11px;
-    min-width: 50px;
+  .switch {
+    width: 40px;
+    height: 20px;
+  }
+
+  .slider:before {
+    height: 14px;
+    width: 14px;
+    left: 3px;
+    bottom: 3px;
+  }
+
+  input:checked + .slider:before {
+    transform: translateX(20px);
+  }
+
+  .switch-label {
+    margin-left: 45px;
+    font-size: 10px;
   }
 }
 
@@ -2592,5 +2738,13 @@ h1 {
   border-radius: 4px;
   text-align: center;
   font-size: 14px;
+}
+
+.chart-title {
+  text-align: center;
+  font-size: 16px;
+  margin: 0 0 12px 0;
+  color: var(--primary-text-color);
+  font-weight: 500;
 }
 </style>
