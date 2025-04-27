@@ -53,7 +53,7 @@ const getCredentialsFromConfig = () => {
     }
 
     // 如果都找不到，返回空值
-    return { username: '', password: '' };
+    return {username: '', password: ''};
 };
 
 // 获取Home Assistant系统语言
@@ -146,7 +146,7 @@ api.interceptors.request.use(
 api.interceptors.response.use(
     response => {
         console.log('接收到响应:', response.config.url, '响应头:', JSON.stringify(response.headers));
-        const { data } = response;
+        const {data} = response;
 
         // 检查响应格式是否符合预期
         if (data === undefined) {
@@ -160,7 +160,11 @@ api.interceptors.response.use(
             return Promise.reject(error);
         }
         // 正常响应，返回业务数据
+        if (data&&data.obj === null) {
+            return data;
+        }
         return data.obj;
+
     },
     error => {
         // 处理网络错误、超时等
@@ -294,7 +298,7 @@ export const getEnergyFlowData = async (plantId) => {
 
         // 使用params方式传递参数
         return await api.post('/energy/getHomeCountData', null, {
-            params: { plantId: targetPlantId }
+            params: {plantId: targetPlantId}
         });
     } catch (error) {
         console.error('获取能源流向数据失败:', error);
@@ -312,7 +316,7 @@ export const getStatusNow = async (plantId, deviceSn = '') => {
         //当日 yyyy-MM-dd
         const time = new Date().toISOString().split('T')[0];
         const response = await api.post('/energy/getEnergyDataDay', null, {
-            params: { plantId: targetPlantId, time, deviceSn }
+            params: {plantId: targetPlantId, time, deviceSn}
         });
         // console.log('功率统计图数据:', response);
         return response;
@@ -333,12 +337,59 @@ export const getPlantVos = async () => {
         throw error;
     }
 };
+/**
+ * 充电桩开关  0关 1开
+ * @param {Object} val
+ */
+export const changeChargerSwitchStatus = async (val, deviceSn) => {
+    // console.log("val--->", val);
+    let res = await api.post("device/setDeviceParam", null, {
+        params: {
+            deviceSn: deviceSn,
+            startAddr: "0x00AF",
+            data: val
+        }
+    })
+    console.log("充电桩开关响应", res);
+    return res;
+}
+/**
+ * 插座开关  0关 1开
+ * @param {Object} val
+ */
+export const changeSocketSwitchStatus = async (val, deviceSn) => {
+    let res = await api.post('/device/setDeviceParam', null, {
+        params: {
+            deviceSn: deviceSn,
+            startAddr: "0x0000",
+            data: val
+        }
+    });
+    console.log("插座开关响应", res);
+    return res;
+}
+/**
+ * 控制热泵设备  0关 1开
+ * @param {string} deviceSn - 设备序列号
+ * @param {number} status - 状态(0: 关闭, 1: 开启)
+ */
+export const switchPowerControl = async (val, deviceSn, type) => {
+    let res = await api.post("device/setCustomParams", null, {
+        params: {
+            deviceSn: deviceSn,
+            deviceType: type,
+            object: {switch: val},
+        }
+    }, true, true)
+    console.log("热泵开关响应", res);
+    return res;
+}
 
 // 获取当前电站下所有设备 GET /device/getDeviceAllListByPlantId Query: plantId
 export const getDeviceAllListByPlantId = async (plantId) => {
     try {
         const response = await api.get('/device/getDeviceAllListByPlantId', {
-            params: { plantId }
+            params: {plantId}
         })
         // console.log('当前电站下所有设备:', response);
         return response;
@@ -353,7 +404,7 @@ export const getDeviceBySn = async (deviceType, deviceSn) => {
     try {
         const time = new Date().toISOString().split('T')[0];
         const response = await api.post('/device/getDeviceBySn', null, {
-            params: { deviceType, time, sn: deviceSn }
+            params: {deviceType, time, sn: deviceSn}
         })
         // console.log('设备自定义详情信息:', response);
         return response;
@@ -367,7 +418,7 @@ export const getDeviceBySn = async (deviceType, deviceSn) => {
 export const getAiSystemByPlantId = async (plantId) => {
     try {
         const response = await api.get('/aiSystem/getAiSystemByPlantId', {
-            params: { plantId }
+            params: {plantId}
         })
         // console.log('获取电站AI系统数据:', response);
         return response;
@@ -377,39 +428,6 @@ export const getAiSystemByPlantId = async (plantId) => {
     }
 }
 
-// 设置充电器开关状态
-export const setChargerStatus = async (deviceSn, status) => {
-    try {
-        const response = await api.post('/device/setChargerStatus', null, {
-            params: {
-                deviceSn,
-                status: status ? 1 : 0
-            }
-        });
-        // console.log('设置充电器状态:', response);
-        return response;
-    } catch (error) {
-        console.error('设置充电器状态失败:', error);
-        throw error;
-    }
-};
-
-// 设置负载开关状态
-export const setLoadStatus = async (deviceSn, status) => {
-    try {
-        const response = await api.post('/device/setLoadStatus', null, {
-            params: {
-                deviceSn,
-                status: status ? 1 : 0
-            }
-        });
-        // console.log('设置负载状态:', response);
-        return response;
-    } catch (error) {
-        console.error('设置负载状态失败:', error);
-        throw error;
-    }
-};
 
 export default api;
 

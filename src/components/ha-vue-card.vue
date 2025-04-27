@@ -1,5 +1,11 @@
 <template>
   <div class="panel">
+    <!-- 消息提示组件 -->
+    <div v-if="message.show" :class="['message-toast', message.type]">
+      <span class="mdi" :class="message.type === 'success' ? 'mdi-check-circle' : 'mdi-alert-circle'"></span>
+      <span>{{ message.text }}</span>
+    </div>
+    
     <!-- 主面板内容 -->
     <div class="header-container">
       <h2>{{ t('panel.title') }}</h2>
@@ -95,12 +101,15 @@
                 </div>
                 <div class="entity-value-container">
                   <div class="entity-value">{{ entity.value }}{{ entity.unit }}</div>
-                  <!-- 为Load和Charger设备添加开关按钮 -->
-                  <div v-if="group.name === 'Load Devices' || group.name === 'Charger Devices'"
-                       class="device-switch-container">
+                  <!-- 为Load、Charger和热泵设备添加开关按钮 -->
+                  <div
+                      v-if="group.name === t('device.load') || group.name === t('device.charger') || group.name === t('device.heatpump')"
+                      class="device-switch-container">
                     <label class="switch">
                       <input type="checkbox" :checked="entity.switchStatus === 1"
-                             @change="group.name === 'Load Devices' ? toggleLoad(entity.value) : toggleCharger(entity.value)">
+                             @change="group.name === t('device.load') ? toggleLoad(entity.value) : 
+                                     group.name === t('device.charger') ? toggleCharger(entity.value) : 
+                                     toggleHeatPump(entity.value)">
                       <span class="slider round"></span>
                       <span class="switch-label">{{
                           entity.switchStatus === 1 ? t('entity_groups.switch.on') :
@@ -141,7 +150,7 @@
               </div>
               <div class="energy-summary-content">
                 <div class="energy-summary-title">{{ t('energy.solar') }}</div>
-                <div class="energy-summary-value">{{ energySummary.solarDayElec.toFixed(2) }}</div>
+                <div class="energy-summary-value">{{ energySummary.solarDayElec.toFixed(2) }} kWh</div>
               </div>
             </div>
             <div class="energy-summary-card grid">
@@ -150,7 +159,7 @@
               </div>
               <div class="energy-summary-content">
                 <div class="energy-summary-title">{{ t('energy.grid') }}</div>
-                <div class="energy-summary-value">{{ energySummary.gridDayElec.toFixed(2) }}</div>
+                <div class="energy-summary-value">{{ energySummary.gridDayElec.toFixed(2) }} kWh</div>
               </div>
             </div>
             <div class="energy-summary-card load">
@@ -159,7 +168,7 @@
               </div>
               <div class="energy-summary-content">
                 <div class="energy-summary-title">{{ t('energy.load') }}</div>
-                <div class="energy-summary-value">{{ energySummary.loadDayElec.toFixed(2) }}</div>
+                <div class="energy-summary-value">{{ energySummary.loadDayElec.toFixed(2) }} kWh</div>
               </div>
             </div>
             <div class="energy-summary-card battery">
@@ -168,7 +177,7 @@
               </div>
               <div class="energy-summary-content">
                 <div class="energy-summary-title">{{ t('energy.battery') }}</div>
-                <div class="energy-summary-value">{{ energySummary.batteryDayElec.toFixed(2) }}</div>
+                <div class="energy-summary-value">{{ energySummary.batteryDayElec.toFixed(2) }} kWh</div>
               </div>
             </div>
             <div class="energy-summary-card grid-buy">
@@ -177,7 +186,7 @@
               </div>
               <div class="energy-summary-content">
                 <div class="energy-summary-title">{{ t('energy.grid_buy') }}</div>
-                <div class="energy-summary-value">{{ energySummary.gridBuyDayElec.toFixed(2) }}</div>
+                <div class="energy-summary-value">{{ energySummary.gridBuyDayElec.toFixed(2) }} kWh</div>
               </div>
             </div>
             <div class="energy-summary-card battery-discharge">
@@ -186,7 +195,7 @@
               </div>
               <div class="energy-summary-content">
                 <div class="energy-summary-title">{{ t('energy.battery_discharge') }}</div>
-                <div class="energy-summary-value">{{ energySummary.batteryDischargeDayElec.toFixed(2) }}</div>
+                <div class="energy-summary-value">{{ energySummary.batteryDischargeDayElec.toFixed(2) }} kWh</div>
               </div>
             </div>
           </div>
@@ -199,8 +208,6 @@
 <script setup>
 import {
   nextTick,
-  watchEffect,
-  provide,
   onBeforeMount,
   onBeforeUnmount,
   onBeforeUpdate,
@@ -219,10 +226,9 @@ import {
   getDeviceBySn,
   login,
   getAiSystemByPlantId,
-  setChargerStatus,
-  setLoadStatus
+ switchPowerControl, changeSocketSwitchStatus, changeChargerSwitchStatus
 } from '../services/api';
-import {I18nInjectionKey, useI18n, createI18n} from "vue-i18n";
+import {useI18n} from "vue-i18n";
 
 console.log('加载到ha-panel')
 // 将md5函数暴露到全局，以便api.js使用
@@ -271,10 +277,10 @@ import zhCN from '../locales/zh-CN.json'
 // const i18n = createI18n({
 //   locale: 'en',
 //   messages,
-  // legacy: false,
-  // fallbackLocale: 'en',
-  // globalInjection: true,
-  // useScope: 'global'
+// legacy: false,
+// fallbackLocale: 'en',
+// globalInjection: true,
+// useScope: 'global'
 // })
 // props.locale = 'en'
 // // 通过 provide 注入 i18n
@@ -288,11 +294,11 @@ console.log('i18n获取完毕:', i18n)
 //   i18n.locale.value = props.locale
 // })
 
-const {t,locale} = i18n
+const {t, locale} = i18n
 console.log('locale:', locale.value)
-console.log('messages:', i18n.messages.value)
-console.log(t('title'))
-console.log(t('panel.title'))
+// console.log('messages:', i18n.messages.value)
+// console.log(t('title'))
+// console.log(t('panel.title'))
 // console.log('t:', t)
 // 从hass对象中获取配置
 const loadConfigFromHass = () => {
@@ -306,9 +312,6 @@ const loadConfigFromHass = () => {
         credentials.value = {
           username: config.username || '',
           password: config.password || '',
-          api_url: config.api_url || '',
-          plant_id: config.plant_id || '',
-          remember: true
         };
         return true;
       }
@@ -321,9 +324,6 @@ const loadConfigFromHass = () => {
       credentials.value = {
         username: config.username || '',
         password: config.password || '',
-        api_url: config.api_url || '',
-        plant_id: config.plant_id || '',
-        remember: true
       };
       return true;
     }
@@ -333,9 +333,6 @@ const loadConfigFromHass = () => {
       credentials.value = {
         username: props.config.username || '',
         password: props.config.password || '',
-        api_url: props.config.api_url || '',
-        plant_id: props.config.plant_id || '',
-        remember: true
       };
       return true;
     }
@@ -350,18 +347,8 @@ const loadConfigFromHass = () => {
 // 保存配置到hass对象
 const saveConfigToHass = async () => {
   try {
-    // 如果hass对象可用，尝试保存到集成配置中
-    // if (props.hass && props.hass.callService) {
-    //   // 调用服务保存配置
-    //   await props.hass.callService('aecc', 'save_config', {
-    //     username: credentials.value.username,
-    //     password: credentials.value.password,
-    //   });
-    //   console.log('配置已保存到Home Assistant集成');
-    // }
 
     // 同时保存到localStorage作为备份
-
     localStorage.setItem('aecc_config', JSON.stringify({
       username: credentials.value.username,
       password: credentials.value.password,
@@ -454,10 +441,14 @@ onMounted(() => {
       attributes: state.attributes
     })));
   }
-  localStorage.setItem('language', props.hass.config ? props.hass.config.language.split("-")[0] + "-" + props.hass.config.country : 'en-US')
+  const locale1 = props.hass.config.language.split("-")[0] + "-" + props.hass.config.country;
+  localStorage.setItem('language', locale1)
   // console.log('i18n.loacle:', i18n.locale)
-  props.locale = localStorage.getItem('language')// 添加窗口大小变化监听
+  props.locale = locale1// 添加窗口大小变化监听
+  locale.value = locale1
+  console.log('i18n.loacle:', locale.value)
   window.addEventListener('resize', handleResize);
+
 });
 
 const onPlantChange = async () => {
@@ -968,6 +959,12 @@ const updateCharts = async (energyFlowData) => {
         };
         // console.log("[ha-vue-card] 使用真实能流图数据:", simulatedData.value);
       }
+
+      // 保存热泵设备列表
+      if (energyFlowData && energyFlowData.heatPumpList) {
+        deviceInfo.value.heatPumpList = energyFlowData.heatPumpList;
+        console.log("[ha-vue-card] 获取到热泵设备列表:", deviceInfo.value.heatPumpList);
+      }
     }
   } catch (error) {
     console.error("[ha-vue-card] 获取能流图数据失败:", error);
@@ -1464,6 +1461,27 @@ const updateEntityGroups = async () => {
       }
     }
 
+    // 获取热泵设备详细信息
+    if (deviceInfo.value.heatPumpList && deviceInfo.value.heatPumpList.length > 0) {
+      console.log("[ha-vue-card] 获取热泵设备详细信息", deviceInfo.value.heatPumpList);
+      deviceDetailInfo.value.heatPumps = [];
+      for (const heatPump of deviceInfo.value.heatPumpList) {
+        try {
+          if (heatPump.deviceSn && heatPump.iconType) {
+            const heatPumpInfo = await getDeviceBySn(heatPump.iconType, heatPump.deviceSn);
+            deviceDetailInfo.value.heatPumps.push({
+              deviceSn: heatPump.deviceSn,
+              iconType: heatPump.iconType,
+              details: heatPumpInfo
+            });
+            console.log("[ha-vue-card] 获取热泵设备详细信息:", heatPumpInfo);
+          }
+        } catch (error) {
+          console.error("[ha-vue-card] 获取热泵设备详细信息失败:", error);
+        }
+      }
+    }
+
     // 更新实体组数据
     updateEntityGroupsFromDeviceInfo();
   } catch (error) {
@@ -1528,6 +1546,23 @@ const updateEntityGroupsFromDeviceInfo = () => {
         switchStatus: charger.switchStatus
       })),
       subGroups: generateChargerSubGroups()
+    });
+  }
+
+  // 添加热泵设备组
+  if (deviceInfo.value.heatPumpList && deviceInfo.value.heatPumpList.length > 0) {
+    newGroups.push({
+      name: t('device.heatpump'),
+      expanded: false,
+      entities: deviceInfo.value.heatPumpList.map(heatPump => ({
+        id: `heatpump.${heatPump.deviceSn}`,
+        description: `Heat Pump ${heatPump.deviceSn}`,
+        value: heatPump.deviceSn,
+        unit: '',
+        type:heatPump.type,
+        switchStatus: heatPump.switchStatus
+      })),
+      subGroups: generateHeatPumpSubGroups()
     });
   }
 
@@ -1739,6 +1774,59 @@ const generateChargerSubGroups = () => {
   return subGroups;
 };
 
+// 生成热泵子组
+const generateHeatPumpSubGroups = () => {
+  const subGroups = [];
+
+  if (deviceDetailInfo.value.heatPumps && deviceDetailInfo.value.heatPumps.length > 0) {
+    for (const heatPump of deviceDetailInfo.value.heatPumps) {
+      if (heatPump.details && heatPump.details.deviceInfoMap) {
+        const deviceInfoMap = heatPump.details.deviceInfoMap;
+
+        // 为每个热泵设备创建一个子组
+        const subGroup = {
+          name: `Heat Pump ${heatPump.deviceSn}`,
+          expanded: false,
+          entities: []
+        };
+
+        // 遍历每个分类（如"基础信息"等）
+        for (const [category, items] of Object.entries(deviceInfoMap)) {
+          // 遍历该分类下的所有键值对
+          for (const [key, value] of Object.entries(items)) {
+            if (value !== null && value !== undefined) {
+              // 提取单位（如果有）
+              let displayValue = value;
+              let unit = '';
+
+              // 尝试从值中提取单位，比如"200.0W"中的"W"
+              const match = String(value).match(/^([\d.]+)(\D+)$/);
+              if (match) {
+                displayValue = match[1];
+                unit = match[2];
+              }
+
+              subGroup.entities.push({
+                id: `heatpump.${heatPump.deviceSn}.${category}.${key}`,
+                description: key,
+                value: displayValue,
+                unit: unit
+              });
+            }
+          }
+        }
+
+        // 只添加有实体的子组
+        if (subGroup.entities.length > 0) {
+          subGroups.push(subGroup);
+        }
+      }
+    }
+  }
+
+  return subGroups;
+};
+
 // Home Assistant Web Component 生命周期方法
 const setConfig = (config) => {
   console.log('[ha-vue-card] setConfig被调用', config);
@@ -1798,6 +1886,11 @@ const deviceInfo = ref({
   // 电表
   emSn: '',
   emType: '',
+  // 热泵设备列表
+  heatPumpList: [],
+  // 负载和充电桩设备列表
+  loadList: [],
+  chargerList: [],
   //....
 });
 
@@ -1805,8 +1898,9 @@ const deviceInfo = ref({
 const deviceDetailInfo = ref({
   inv: null, // 逆变器详细信息
   bat: null,   // Battery详细信息
-  load: null, // Load详细信息
-  charger: null, // Charger详细信息
+  loads: [], // Load详细信息列表
+  chargers: [], // Charger详细信息列表
+  heatPumps: [], // 热泵详细信息列表
   em: null, // 电表详细信息
   solar: null, // 太阳能详细信息
   grid: null, // Grid详细信息
@@ -1816,14 +1910,75 @@ const deviceDetailInfo = ref({
 const aiPlanState = ref();
 aiPlanState.value = t('state.loading')
 
+// 消息提示状态
+const message = ref({
+  show: false,
+  text: '',
+  type: 'success',
+  timer: null
+});
+
+// 显示消息提示
+const showMessage = (text, type = 'success', duration = 3000) => {
+  // 清除之前的定时器
+  if (message.value.timer) {
+    clearTimeout(message.value.timer);
+  }
+  
+  // 设置新消息
+  message.value = {
+    show: true,
+    text,
+    type,
+    timer: null
+  };
+  
+  // 设置定时器自动关闭
+  message.value.timer = setTimeout(() => {
+    message.value.show = false;
+  }, duration);
+};
+
 // 获取AI绿电计划数据
 const fetchAiPlanData = async () => {
   try {
     const aiData = await getAiSystemByPlantId(selectedPlantId.value);
     console.log(t('logs.energy_flow_object'), aiData);
     if (aiData) {
+      let modeStr = "--";
       // 根据Python逻辑处理AI状态
-      aiPlanState.value = aiData.modeStr
+      if (aiData && aiData.antiRefluxSet === 1) {
+        if (aiData.powerTimeSetVos && aiData.powerTimeSetVos.length > 0) {
+          switch (aiData.powerTimeSetVos[0].mode) {
+            case 0:
+              modeStr = "波峰";
+              break;
+            case 1:
+              modeStr = "波谷";
+              break;
+            case 2:
+              modeStr = "负电价";
+              break;
+            case 3:
+              modeStr = "智能联动";
+              break;
+            case 4:
+              modeStr = "守护模式";
+              break;
+          }
+        } else if (ai.powerMode === 1) {
+          modeStr = "零馈电";
+        } else if (ai.powerMode === 0) {
+          modeStr = "智能联动";
+        } else {
+          modeStr = "关闭";
+        }
+      } else {
+        modeStr = "关闭";
+      }
+
+
+      aiPlanState.value = modeStr
     } else {
       aiPlanState.value = t('state.no_data');
     }
@@ -1840,6 +1995,7 @@ const toggleLoad = async (deviceSn) => {
     const loadDevice = deviceInfo.value.loadList.find(load => load.deviceSn === deviceSn);
     if (!loadDevice) {
       console.error(`[ha-vue-card] 未找到Load设备: ${deviceSn}`);
+      showMessage(t('device.device_not_found'), 'error');
       return;
     }
 
@@ -1847,17 +2003,29 @@ const toggleLoad = async (deviceSn) => {
     const newStatus = loadDevice.switchStatus === 1 ? 0 : 1;
 
     // 调用API设置状态
-    await setLoadStatus(deviceSn, newStatus);
+    const response = await changeSocketSwitchStatus(newStatus, deviceSn);
+    
+    // 检查返回结果
+    if (response && response.result === 0) {
+      console.log(response)
+      // 成功
+      showMessage(t('device.switch_success'), 'success');
+      
+      // 更新本地状态
+      loadDevice.switchStatus = newStatus;
 
-    // 更新本地状态
-    loadDevice.switchStatus = newStatus;
-
-    // 更新UI
-    updateEntityGroupsFromDeviceInfo();
-
-    console.log(`[ha-vue-card] 切换Load设备 ${deviceSn} 状态为: ${newStatus}`);
+      // 更新UI
+      updateEntityGroupsFromDeviceInfo();
+      
+      console.log(`[ha-vue-card] 切换Load设备 ${deviceSn} 状态为: ${newStatus}`);
+    } else {
+      // 失败
+      showMessage(response && response.msg ? response.msg : t('device.switch_failed'), 'error');
+      console.error(`[ha-vue-card] 切换Load设备状态失败:`, response);
+    }
   } catch (error) {
     console.error(`[ha-vue-card] 切换Load设备状态失败:`, error);
+    showMessage(error.message || t('device.switch_failed'), 'error');
   }
 };
 
@@ -1868,6 +2036,7 @@ const toggleCharger = async (deviceSn) => {
     const chargerDevice = deviceInfo.value.chargerList.find(charger => charger.deviceSn === deviceSn);
     if (!chargerDevice) {
       console.error(`[ha-vue-card] 未找到Charger设备: ${deviceSn}`);
+      showMessage(t('device.device_not_found'), 'error');
       return;
     }
 
@@ -1875,17 +2044,68 @@ const toggleCharger = async (deviceSn) => {
     const newStatus = chargerDevice.switchStatus === 1 ? 0 : 1;
 
     // 调用API设置状态
-    await setChargerStatus(deviceSn, newStatus);
+    const response = await changeChargerSwitchStatus(newStatus, deviceSn);
+    console.log(response)
+    // 检查返回结果
+    if (response && response.result === 0) {
+      // 成功
+      showMessage(t('device.switch_success'), 'success');
+      
+      // 更新本地状态
+      chargerDevice.switchStatus = newStatus;
 
-    // 更新本地状态
-    chargerDevice.switchStatus = newStatus;
-
-    // 更新UI
-    updateEntityGroupsFromDeviceInfo();
-
-    console.log(`[ha-vue-card] 切换Charger设备 ${deviceSn} 状态为: ${newStatus}`);
+      // 更新UI
+      updateEntityGroupsFromDeviceInfo();
+      
+      console.log(`[ha-vue-card] 切换Charger设备 ${deviceSn} 状态为: ${newStatus}`);
+    } else {
+      // 失败
+      showMessage(response && response.msg ? response.msg : t('device.switch_failed'), 'error');
+      console.error(`[ha-vue-card] 切换Charger设备状态失败:`, response);
+    }
   } catch (error) {
     console.error(`[ha-vue-card] 切换Charger设备状态失败:`, error);
+    showMessage(error.message || t('device.switch_failed'), 'error');
+  }
+};
+
+// 控制热泵设备开关
+const toggleHeatPump = async (deviceSn) => {
+  try {
+    // 找到对应的设备
+    const heatPumpDevice = deviceInfo.value.heatPumpList.find(heatPump => heatPump.deviceSn === deviceSn);
+    if (!heatPumpDevice) {
+      console.error(`[ha-vue-card] 未找到热泵设备: ${deviceSn}`);
+      showMessage(t('device.device_not_found'), 'error');
+      return;
+    }
+
+    // 切换状态 (0 -> 1 或 1 -> 0)
+    const newStatus = heatPumpDevice.switchStatus === 1 ? 0 : 1;
+
+    // 调用API设置状态
+    const response = await switchPowerControl(newStatus, deviceSn,heatPumpDevice.type);
+    console.log(response)
+    // 检查返回结果
+    if (response && response.result === 0) {
+      // 成功
+      showMessage(t('device.switch_success'), 'success');
+      
+      // 更新本地状态
+      heatPumpDevice.switchStatus = newStatus;
+
+      // 更新UI
+      updateEntityGroupsFromDeviceInfo();
+      
+      console.log(`[ha-vue-card] 切换热泵设备 ${deviceSn} 状态为: ${newStatus}`);
+    } else {
+      // 失败
+      showMessage(response && response.msg ? response.msg : t('device.switch_failed'), 'error');
+      console.error(`[ha-vue-card] 切换热泵设备状态失败:`, response);
+    }
+  } catch (error) {
+    console.error(`[ha-vue-card] 切换热泵设备状态失败:`, error);
+    showMessage(error.message || t('device.switch_failed'), 'error');
   }
 };
 
@@ -1900,6 +2120,50 @@ const toggleCharger = async (deviceSn) => {
   background-color: var(--card-background-color, #fff);
   border-radius: 8px;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  position: relative;
+}
+
+/* 消息提示样式 */
+.message-toast {
+  position: fixed;
+  top: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 10px 20px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  box-shadow: 0 3px 6px rgba(0, 0, 0, 0.16);
+  z-index: 9999;
+  animation: slide-down 0.3s ease-out;
+  min-width: 250px;
+  max-width: 80%;
+}
+
+.message-toast .mdi {
+  margin-right: 10px;
+  font-size: 20px;
+}
+
+.message-toast.success {
+  background-color: rgba(76, 175, 80, 0.9);
+  color: white;
+}
+
+.message-toast.error {
+  background-color: rgba(244, 67, 54, 0.9);
+  color: white;
+}
+
+@keyframes slide-down {
+  0% {
+    transform: translateX(-50%) translateY(-20px);
+    opacity: 0;
+  }
+  100% {
+    transform: translateX(-50%) translateY(0);
+    opacity: 1;
+  }
 }
 
 /* 头部容器样式 */

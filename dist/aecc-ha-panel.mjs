@@ -94638,6 +94638,9 @@ api.interceptors.response.use(
       error.code = data.result;
       return Promise.reject(error);
     }
+    if (data && data.obj === null) {
+      return data;
+    }
     return data.obj;
   },
   (error) => {
@@ -94756,6 +94759,39 @@ const getPlantVos = async () => {
     throw error;
   }
 };
+const changeChargerSwitchStatus = async (val, deviceSn) => {
+  let res = await api.post("device/setDeviceParam", null, {
+    params: {
+      deviceSn,
+      startAddr: "0x00AF",
+      data: val
+    }
+  });
+  console.log("充电桩开关响应", res);
+  return res;
+};
+const changeSocketSwitchStatus = async (val, deviceSn) => {
+  let res = await api.post("/device/setDeviceParam", null, {
+    params: {
+      deviceSn,
+      startAddr: "0x0000",
+      data: val
+    }
+  });
+  console.log("插座开关响应", res);
+  return res;
+};
+const switchPowerControl = async (val, deviceSn, type) => {
+  let res = await api.post("device/setCustomParams", null, {
+    params: {
+      deviceSn,
+      deviceType: type,
+      object: { switch: val }
+    }
+  }, true, true);
+  console.log("热泵开关响应", res);
+  return res;
+};
 const getDeviceBySn = async (deviceType, deviceSn) => {
   try {
     const time = (/* @__PURE__ */ new Date()).toISOString().split("T")[0];
@@ -94776,34 +94812,6 @@ const getAiSystemByPlantId = async (plantId) => {
     return response;
   } catch (error) {
     console.error("获取电站AI系统数据失败:", error);
-    throw error;
-  }
-};
-const setChargerStatus = async (deviceSn, status) => {
-  try {
-    const response = await api.post("/device/setChargerStatus", null, {
-      params: {
-        deviceSn,
-        status: status ? 1 : 0
-      }
-    });
-    return response;
-  } catch (error) {
-    console.error("设置充电器状态失败:", error);
-    throw error;
-  }
-};
-const setLoadStatus = async (deviceSn, status) => {
-  try {
-    const response = await api.post("/device/setLoadStatus", null, {
-      params: {
-        deviceSn,
-        status: status ? 1 : 0
-      }
-    });
-    return response;
-  } catch (error) {
-    console.error("设置负载状态失败:", error);
     throw error;
   }
 };
@@ -98622,13 +98630,18 @@ const en = {
   "device.detail_section": "Details",
   "device.battery": "Battery",
   "device.meter": "Meter",
+  "device.load": "Load Devices",
+  "device.heatpump": "heatPump Devices",
   "device.load_devices": "Load Devices",
+  "device.charger": "Charger Devices",
   "device.charger_devices": "Charger Devices",
   "entity_groups.load_devices": "Load Devices",
   "entity_groups.charger_devices": "Charger Devices",
   "entity_groups.switch.on": "ON",
   "entity_groups.switch.off": "OFF",
-  "energy.title": "Energy (kWh)",
+  "device.switch_failed": "failed",
+  "device.switch_success": "success",
+  "energy.title": "Energy",
   "energy.solar": "Solar Energy",
   "energy.grid": "Grid Energy",
   "energy.load": "Load Energy",
@@ -98678,14 +98691,19 @@ const zhCN = {
   "device.details": "设备详情",
   "device.detail_section": "详情",
   "device.battery": "电池",
+  "device.heatpump": "热泵",
   "device.meter": "电表",
+  "device.load": "负载设备",
   "device.load_devices": "负载设备",
+  "device.charger": "充电设备",
   "device.charger_devices": "充电设备",
   "entity_groups.load_devices": "负载设备",
   "entity_groups.charger_devices": "充电设备",
   "entity_groups.switch.on": "开启",
   "entity_groups.switch.off": "关闭",
-  "energy.title": "能量 (kWh)",
+  "device.switch_failed": "开启成功",
+  "device.switch_success": "开启失败",
+  "energy.title": "电量统计",
   "energy.solar": "太阳能",
   "energy.grid": "电网能量",
   "energy.load": "负载能量",
@@ -98718,7 +98736,7 @@ const zhCN = {
   "logs.all_data_initialized": "所有数据初始化完成",
 };
 
-const _style_0 = ".panel[data-v-e08310f3]{padding:16px;font-family:var(--primary-font-family, Roboto, sans-serif);color:var(--primary-text-color, #333);background-color:var(--card-background-color, #fff);border-radius:8px;box-shadow:0 2px 4px #0000001a}.header-container[data-v-e08310f3]{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px}.config-button[data-v-e08310f3]{background-color:var(--primary-color, #4CAF50);color:#fff;border:none;border-radius:50%;width:40px;height:40px;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:background-color .3s}.config-button[data-v-e08310f3]:hover{background-color:var(--light-primary-color, #66BB6A)}.config-button .mdi[data-v-e08310f3]{font-size:20px}.config-dialog-overlay[data-v-e08310f3]{position:fixed;inset:0;background-color:#00000080;display:flex;align-items:center;justify-content:center;z-index:1000}.config-dialog[data-v-e08310f3]{background-color:var(--card-background-color, #fff);border-radius:8px;width:90%;max-width:500px;max-height:90vh;overflow-y:auto;box-shadow:0 4px 8px #0003}.config-dialog-header[data-v-e08310f3]{display:flex;justify-content:space-between;align-items:center;padding:16px;border-bottom:1px solid var(--divider-color, #e0e0e0)}.config-dialog-header h3[data-v-e08310f3]{margin:0;font-size:18px;font-weight:500}.close-button[data-v-e08310f3]{background:none;border:none;cursor:pointer;color:var(--secondary-text-color, #757575);font-size:20px;display:flex;align-items:center;justify-content:center}.close-button[data-v-e08310f3]:hover{color:var(--primary-text-color, #333)}.config-dialog-content[data-v-e08310f3]{padding:16px}.config-submit-button[data-v-e08310f3]{width:100%;padding:10px;margin-top:16px;background-color:var(--primary-color, #4CAF50);color:#fff;border:none;border-radius:4px;font-size:14px;font-weight:500;cursor:pointer;transition:background-color .3s}.config-submit-button[data-v-e08310f3]:hover{background-color:var(--light-primary-color, #66BB6A)}.config-submit-button[data-v-e08310f3]:disabled{background-color:var(--disabled-color, #cccccc);cursor:not-allowed}.auth-prompt[data-v-e08310f3]{display:flex;justify-content:center;align-items:center;height:200px;background-color:var(--card-background-color, #fff);border-radius:8px;box-shadow:0 2px 4px #0000001a}.auth-prompt-content[data-v-e08310f3]{text-align:center;color:var(--secondary-text-color, #757575)}.auth-prompt-content .mdi[data-v-e08310f3]{font-size:48px;margin-bottom:16px;display:block}.form-group input[type=text][data-v-e08310f3],.form-group input[type=password][data-v-e08310f3]{width:100%;padding:10px;border:1px solid var(--divider-color, #e0e0e0);border-radius:4px;font-size:14px}.form-group input[type=text][data-v-e08310f3]:focus,.form-group input[type=password][data-v-e08310f3]:focus{border-color:var(--primary-color, #4CAF50);outline:none}.checkbox-container[data-v-e08310f3]{display:flex;align-items:center;cursor:pointer;font-size:14px}.error-message[data-v-e08310f3]{margin-top:16px;padding:10px;background-color:#eb57571a;color:#eb5757;border-radius:4px;font-size:14px}.plant-selector-card[data-v-e08310f3]{background:var(--card-background-color);border-radius:8px;padding:16px;display:flex;align-items:center;box-shadow:0 2px 4px #0000001a;height:auto;min-height:60px;z-index:10;position:relative}.plant-selector-card label[data-v-e08310f3]{margin-right:12px;font-weight:500}.plant-selector-card select[data-v-e08310f3]{flex:1;padding:8px 12px;border-radius:4px;border:1px solid var(--divider-color);background-color:var(--card-background-color);color:var(--primary-text-color);font-size:14px}.content[data-v-e08310f3]{margin-top:24px}h1[data-v-e08310f3]{margin:0;font-size:24px;font-weight:400;border-bottom:1px solid var(--divider-color);padding-bottom:16px}.chart-container[data-v-e08310f3]{margin:20px 0;width:100%;position:relative}.energy-flow-container[data-v-e08310f3]{height:0;min-height:250px;padding-bottom:90%!important;position:relative;width:100%;box-sizing:border-box;overflow:hidden}.energy-flow-container .chart[data-v-e08310f3]{position:absolute;top:0;left:0;width:100%;height:100%;box-sizing:border-box}.chart-container[data-v-e08310f3]:nth-child(2){padding-bottom:80%!important;background:var(--card-background-color);border-radius:8px;padding:16px;box-shadow:0 2px 4px #0000001a;margin-bottom:16px}.chart[data-v-e08310f3]{width:100%;background:var(--card-background-color);border-radius:8px;padding:16px;box-sizing:border-box}.entities-container[data-v-e08310f3]{margin-top:20px;width:100%}.section-title[data-v-e08310f3]{text-align:center;font-size:18px;margin-bottom:16px;color:var(--primary-text-color)}.sub-section-title[data-v-e08310f3]{text-align:center;font-size:16px;margin:12px 0;color:var(--secondary-text-color)}.entity-group[data-v-e08310f3]{margin-bottom:16px;border:1px solid var(--divider-color);border-radius:8px;overflow:hidden}.group-header[data-v-e08310f3]{padding:12px 16px;background:var(--secondary-background-color);cursor:pointer;display:flex;justify-content:space-between;align-items:center;border-bottom:2px solid var(--primary-color);transition:background-color .3s ease}.group-header[data-v-e08310f3]:hover{background-color:#ff98001a}.arrow[data-v-e08310f3]{transition:transform .3s ease}.arrow.expanded[data-v-e08310f3]{transform:rotate(180deg)}.group-content[data-v-e08310f3]{padding:8px}.entity-subgroup[data-v-e08310f3]{margin:8px;border:1px solid var(--divider-color);border-radius:4px;overflow:hidden}.subgroup-header[data-v-e08310f3]{padding:8px 12px;background:var(--secondary-background-color);cursor:pointer;display:flex;justify-content:space-between;align-items:center;font-size:.9em}.subgroup-content[data-v-e08310f3]{padding:4px;background:var(--card-background-color)}.entity-card[data-v-e08310f3]{display:flex;justify-content:space-between;align-items:center;padding:12px;background:var(--card-background-color);margin:8px;border-radius:4px;box-shadow:0 2px 4px #0000001a;border-left:3px solid var(--primary-color);transition:all .3s ease}.entity-card[data-v-e08310f3]:hover{transform:translate(2px);box-shadow:0 4px 8px #ff980033}.entity-info[data-v-e08310f3]{display:flex;align-items:center;gap:8px}.entity-description[data-v-e08310f3]{font-size:14px;color:var(--primary-text-color)}.entity-value[data-v-e08310f3]{font-size:14px;font-weight:500;color:var(--primary-color);padding:4px 8px;background-color:#ff98001a;border-radius:4px}.mdi[data-v-e08310f3]{font-size:20px;color:var(--primary-color);transition:transform .3s ease}.mdi[data-v-e08310f3]:hover{transform:scale(1.1)}@media (max-width: 600px){.panel[data-v-e08310f3]{padding:16px}.plant-selector-card[data-v-e08310f3]{padding:12px;min-height:70px}.energy-flow-container[data-v-e08310f3]{min-height:200px;padding-bottom:90%!important}.chart-container[data-v-e08310f3]:nth-child(2){padding-bottom:120%!important;width:100%;box-sizing:border-box;overflow:hidden}.chart[data-v-e08310f3]{padding:8px;width:100%;box-sizing:border-box}.entity-card[data-v-e08310f3]{flex-direction:row;justify-content:space-between;align-items:center;gap:16px}.entity-description[data-v-e08310f3]{flex:7}.entity-value[data-v-e08310f3]{flex:3;text-align:right}}.energy-summary-container[data-v-e08310f3]{margin-top:30px;width:100%}.energy-summary-grid[data-v-e08310f3]{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:16px}.energy-summary-card[data-v-e08310f3]{display:flex;align-items:center;padding:16px;border-radius:8px;box-shadow:0 2px 4px #0000001a;transition:transform .3s ease,box-shadow .3s ease}.energy-summary-card[data-v-e08310f3]:hover{transform:translateY(-5px);box-shadow:0 4px 8px #0003}.energy-summary-icon[data-v-e08310f3]{display:flex;align-items:center;justify-content:center;width:50px;height:50px;border-radius:50%;margin-right:16px}.energy-summary-icon .mdi[data-v-e08310f3]{font-size:24px;color:#fff}.energy-summary-content[data-v-e08310f3]{flex:1}.energy-summary-title[data-v-e08310f3]{font-size:14px;color:var(--secondary-text-color);margin-bottom:4px}.energy-summary-value[data-v-e08310f3]{font-size:24px;font-weight:600;color:var(--primary-text-color)}.energy-summary-card.solar .energy-summary-icon[data-v-e08310f3]{background-color:#ff9800}.energy-summary-card.grid .energy-summary-icon[data-v-e08310f3]{background-color:#673ab7}.energy-summary-card.load .energy-summary-icon[data-v-e08310f3]{background-color:#f44336}.energy-summary-card.battery .energy-summary-icon[data-v-e08310f3]{background-color:#00bcd4}.energy-summary-card.grid-buy .energy-summary-icon[data-v-e08310f3]{background-color:#9c27b0}.energy-summary-card.battery-discharge .energy-summary-icon[data-v-e08310f3]{background-color:#009688}@media (max-width: 600px){.energy-summary-grid[data-v-e08310f3]{grid-template-columns:repeat(2,1fr);gap:8px}.energy-summary-card[data-v-e08310f3]{padding:10px}.energy-summary-icon[data-v-e08310f3]{width:40px;height:40px;margin-right:10px}.energy-summary-icon .mdi[data-v-e08310f3]{font-size:20px}.energy-summary-title[data-v-e08310f3]{font-size:12px}.energy-summary-value[data-v-e08310f3]{font-size:18px}}.ai-plan-card[data-v-e08310f3]{background:var(--card-background-color);border-radius:8px;padding:16px;display:flex;align-items:center;box-shadow:0 2px 4px #0000001a;height:auto;min-height:60px;z-index:10;position:relative}.ai-plan-card label[data-v-e08310f3]{margin-right:12px;font-weight:500}.ai-plan-value[data-v-e08310f3]{flex:1;padding:8px 12px;border-radius:4px;background-color:#ff98001a;color:var(--primary-color);font-weight:500;text-align:center}.device-switch-container[data-v-e08310f3]{display:flex;justify-content:flex-end;margin-top:8px}.switch[data-v-e08310f3]{position:relative;display:inline-block;width:50px;height:24px;margin-right:8px}.switch input[data-v-e08310f3]{opacity:0;width:0;height:0}.slider[data-v-e08310f3]{position:absolute;cursor:pointer;inset:0;background-color:#ccc;transition:.4s}.slider[data-v-e08310f3]:before{position:absolute;content:\"\";height:16px;width:16px;left:4px;bottom:4px;background-color:#fff;transition:.4s}input:checked+.slider[data-v-e08310f3]{background-color:var(--primary-color, #4CAF50)}input:focus+.slider[data-v-e08310f3]{box-shadow:0 0 1px var(--primary-color, #4CAF50)}input:checked+.slider[data-v-e08310f3]:before{transform:translate(26px)}.slider.round[data-v-e08310f3]{border-radius:24px}.slider.round[data-v-e08310f3]:before{border-radius:50%}.switch-label[data-v-e08310f3]{margin-left:60px;line-height:24px;font-size:12px;font-weight:500;color:var(--primary-text-color)}.sub-group-header[data-v-e08310f3]{display:flex;justify-content:space-between;align-items:center;padding:8px 16px;background-color:var(--card-background-color);border-radius:4px;margin-bottom:8px}.sub-group-name[data-v-e08310f3]{font-weight:500;color:var(--primary-text-color)}.entity-value-container[data-v-e08310f3]{display:flex;flex-direction:column;align-items:flex-end}.device-switch-button[data-v-e08310f3],.device-switch-button.on[data-v-e08310f3],.device-switch-button.off[data-v-e08310f3],.device-switch-button[data-v-e08310f3]:hover{display:none}@media (max-width: 600px){.switch[data-v-e08310f3]{width:40px;height:20px}.slider[data-v-e08310f3]:before{height:14px;width:14px;left:3px;bottom:3px}input:checked+.slider[data-v-e08310f3]:before{transform:translate(20px)}.switch-label[data-v-e08310f3]{margin-left:45px;font-size:10px}}.configuration-help[data-v-e08310f3]{background:var(--card-background-color);border-radius:8px;padding:20px;margin:16px 0;box-shadow:0 2px 4px #0000001a;color:var(--primary-text-color)}.configuration-help h2[data-v-e08310f3]{color:var(--error-color, #eb5757);margin-top:0}.configuration-help ol[data-v-e08310f3]{padding-left:20px}.configuration-help pre[data-v-e08310f3]{background:#0000000d;padding:12px;border-radius:4px;overflow-x:auto;font-family:monospace;margin:8px 0}.credentials-form[data-v-e08310f3]{max-width:400px;margin:40px auto;padding:24px;background:var(--card-background-color);border-radius:8px;box-shadow:0 2px 8px #00000026;color:var(--primary-text-color)}.credentials-form h2[data-v-e08310f3]{margin-top:0;text-align:center;color:var(--primary-color);margin-bottom:16px}.credentials-form p[data-v-e08310f3]{text-align:center;margin-bottom:24px;color:var(--secondary-text-color)}.form-group[data-v-e08310f3]{margin-bottom:16px}.form-group label[data-v-e08310f3]{display:block;margin-bottom:8px;font-weight:500}.form-group input[type=text][data-v-e08310f3],.form-group input[type=password][data-v-e08310f3]{width:100%;padding:10px;border-radius:4px;border:1px solid var(--divider-color);background-color:var(--card-background-color);color:var(--primary-text-color);font-size:14px;box-sizing:border-box}.checkbox-container[data-v-e08310f3]{display:flex;align-items:center;cursor:pointer;user-select:none;font-size:14px}.checkbox-container input[data-v-e08310f3]{margin-right:8px}.login-button[data-v-e08310f3]{width:100%;padding:10px;margin-top:16px;background-color:var(--primary-color);color:#fff;border:none;border-radius:4px;font-size:14px;font-weight:500;cursor:pointer;transition:background-color .3s}.login-button[data-v-e08310f3]:hover{background-color:var(--light-primary-color)}.login-button[data-v-e08310f3]:disabled{background-color:var(--disabled-color, #cccccc);cursor:not-allowed}.error-message[data-v-e08310f3]{margin-top:16px;padding:10px;background-color:#eb57571a;color:var(--error-color, #eb5757);border-radius:4px;text-align:center;font-size:14px}.chart-title[data-v-e08310f3]{text-align:center;font-size:16px;margin:0 0 12px;color:var(--primary-text-color);font-weight:500}";
+const _style_0 = ".panel[data-v-0dc47613]{padding:16px;font-family:var(--primary-font-family, Roboto, sans-serif);color:var(--primary-text-color, #333);background-color:var(--card-background-color, #fff);border-radius:8px;box-shadow:0 2px 4px #0000001a;position:relative}.message-toast[data-v-0dc47613]{position:fixed;top:20px;left:50%;transform:translate(-50%);padding:10px 20px;border-radius:4px;display:flex;align-items:center;box-shadow:0 3px 6px #00000029;z-index:9999;animation:slide-down-0dc47613 .3s ease-out;min-width:250px;max-width:80%}.message-toast .mdi[data-v-0dc47613]{margin-right:10px;font-size:20px}.message-toast.success[data-v-0dc47613]{background-color:#4caf50e6;color:#fff}.message-toast.error[data-v-0dc47613]{background-color:#f44336e6;color:#fff}@keyframes slide-down-0dc47613{0%{transform:translate(-50%) translateY(-20px);opacity:0}to{transform:translate(-50%) translateY(0);opacity:1}}.header-container[data-v-0dc47613]{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px}.config-button[data-v-0dc47613]{background-color:var(--primary-color, #4CAF50);color:#fff;border:none;border-radius:50%;width:40px;height:40px;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:background-color .3s}.config-button[data-v-0dc47613]:hover{background-color:var(--light-primary-color, #66BB6A)}.config-button .mdi[data-v-0dc47613]{font-size:20px}.config-dialog-overlay[data-v-0dc47613]{position:fixed;inset:0;background-color:#00000080;display:flex;align-items:center;justify-content:center;z-index:1000}.config-dialog[data-v-0dc47613]{background-color:var(--card-background-color, #fff);border-radius:8px;width:90%;max-width:500px;max-height:90vh;overflow-y:auto;box-shadow:0 4px 8px #0003}.config-dialog-header[data-v-0dc47613]{display:flex;justify-content:space-between;align-items:center;padding:16px;border-bottom:1px solid var(--divider-color, #e0e0e0)}.config-dialog-header h3[data-v-0dc47613]{margin:0;font-size:18px;font-weight:500}.close-button[data-v-0dc47613]{background:none;border:none;cursor:pointer;color:var(--secondary-text-color, #757575);font-size:20px;display:flex;align-items:center;justify-content:center}.close-button[data-v-0dc47613]:hover{color:var(--primary-text-color, #333)}.config-dialog-content[data-v-0dc47613]{padding:16px}.config-submit-button[data-v-0dc47613]{width:100%;padding:10px;margin-top:16px;background-color:var(--primary-color, #4CAF50);color:#fff;border:none;border-radius:4px;font-size:14px;font-weight:500;cursor:pointer;transition:background-color .3s}.config-submit-button[data-v-0dc47613]:hover{background-color:var(--light-primary-color, #66BB6A)}.config-submit-button[data-v-0dc47613]:disabled{background-color:var(--disabled-color, #cccccc);cursor:not-allowed}.auth-prompt[data-v-0dc47613]{display:flex;justify-content:center;align-items:center;height:200px;background-color:var(--card-background-color, #fff);border-radius:8px;box-shadow:0 2px 4px #0000001a}.auth-prompt-content[data-v-0dc47613]{text-align:center;color:var(--secondary-text-color, #757575)}.auth-prompt-content .mdi[data-v-0dc47613]{font-size:48px;margin-bottom:16px;display:block}.form-group input[type=text][data-v-0dc47613],.form-group input[type=password][data-v-0dc47613]{width:100%;padding:10px;border:1px solid var(--divider-color, #e0e0e0);border-radius:4px;font-size:14px}.form-group input[type=text][data-v-0dc47613]:focus,.form-group input[type=password][data-v-0dc47613]:focus{border-color:var(--primary-color, #4CAF50);outline:none}.checkbox-container[data-v-0dc47613]{display:flex;align-items:center;cursor:pointer;font-size:14px}.error-message[data-v-0dc47613]{margin-top:16px;padding:10px;background-color:#eb57571a;color:#eb5757;border-radius:4px;font-size:14px}.plant-selector-card[data-v-0dc47613]{background:var(--card-background-color);border-radius:8px;padding:16px;display:flex;align-items:center;box-shadow:0 2px 4px #0000001a;height:auto;min-height:60px;z-index:10;position:relative}.plant-selector-card label[data-v-0dc47613]{margin-right:12px;font-weight:500}.plant-selector-card select[data-v-0dc47613]{flex:1;padding:8px 12px;border-radius:4px;border:1px solid var(--divider-color);background-color:var(--card-background-color);color:var(--primary-text-color);font-size:14px}.content[data-v-0dc47613]{margin-top:24px}h1[data-v-0dc47613]{margin:0;font-size:24px;font-weight:400;border-bottom:1px solid var(--divider-color);padding-bottom:16px}.chart-container[data-v-0dc47613]{margin:20px 0;width:100%;position:relative}.energy-flow-container[data-v-0dc47613]{height:0;min-height:250px;padding-bottom:90%!important;position:relative;width:100%;box-sizing:border-box;overflow:hidden}.energy-flow-container .chart[data-v-0dc47613]{position:absolute;top:0;left:0;width:100%;height:100%;box-sizing:border-box}.chart-container[data-v-0dc47613]:nth-child(2){padding-bottom:80%!important;background:var(--card-background-color);border-radius:8px;padding:16px;box-shadow:0 2px 4px #0000001a;margin-bottom:16px}.chart[data-v-0dc47613]{width:100%;background:var(--card-background-color);border-radius:8px;padding:16px;box-sizing:border-box}.entities-container[data-v-0dc47613]{margin-top:20px;width:100%}.section-title[data-v-0dc47613]{text-align:center;font-size:18px;margin-bottom:16px;color:var(--primary-text-color)}.sub-section-title[data-v-0dc47613]{text-align:center;font-size:16px;margin:12px 0;color:var(--secondary-text-color)}.entity-group[data-v-0dc47613]{margin-bottom:16px;border:1px solid var(--divider-color);border-radius:8px;overflow:hidden}.group-header[data-v-0dc47613]{padding:12px 16px;background:var(--secondary-background-color);cursor:pointer;display:flex;justify-content:space-between;align-items:center;border-bottom:2px solid var(--primary-color);transition:background-color .3s ease}.group-header[data-v-0dc47613]:hover{background-color:#ff98001a}.arrow[data-v-0dc47613]{transition:transform .3s ease}.arrow.expanded[data-v-0dc47613]{transform:rotate(180deg)}.group-content[data-v-0dc47613]{padding:8px}.entity-subgroup[data-v-0dc47613]{margin:8px;border:1px solid var(--divider-color);border-radius:4px;overflow:hidden}.subgroup-header[data-v-0dc47613]{padding:8px 12px;background:var(--secondary-background-color);cursor:pointer;display:flex;justify-content:space-between;align-items:center;font-size:.9em}.subgroup-content[data-v-0dc47613]{padding:4px;background:var(--card-background-color)}.entity-card[data-v-0dc47613]{display:flex;justify-content:space-between;align-items:center;padding:12px;background:var(--card-background-color);margin:8px;border-radius:4px;box-shadow:0 2px 4px #0000001a;border-left:3px solid var(--primary-color);transition:all .3s ease}.entity-card[data-v-0dc47613]:hover{transform:translate(2px);box-shadow:0 4px 8px #ff980033}.entity-info[data-v-0dc47613]{display:flex;align-items:center;gap:8px}.entity-description[data-v-0dc47613]{font-size:14px;color:var(--primary-text-color)}.entity-value[data-v-0dc47613]{font-size:14px;font-weight:500;color:var(--primary-color);padding:4px 8px;background-color:#ff98001a;border-radius:4px}.mdi[data-v-0dc47613]{font-size:20px;color:var(--primary-color);transition:transform .3s ease}.mdi[data-v-0dc47613]:hover{transform:scale(1.1)}@media (max-width: 600px){.panel[data-v-0dc47613]{padding:16px}.plant-selector-card[data-v-0dc47613]{padding:12px;min-height:70px}.energy-flow-container[data-v-0dc47613]{min-height:200px;padding-bottom:90%!important}.chart-container[data-v-0dc47613]:nth-child(2){padding-bottom:120%!important;width:100%;box-sizing:border-box;overflow:hidden}.chart[data-v-0dc47613]{padding:8px;width:100%;box-sizing:border-box}.entity-card[data-v-0dc47613]{flex-direction:row;justify-content:space-between;align-items:center;gap:16px}.entity-description[data-v-0dc47613]{flex:7}.entity-value[data-v-0dc47613]{flex:3;text-align:right}}.energy-summary-container[data-v-0dc47613]{margin-top:30px;width:100%}.energy-summary-grid[data-v-0dc47613]{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:16px}.energy-summary-card[data-v-0dc47613]{display:flex;align-items:center;padding:16px;border-radius:8px;box-shadow:0 2px 4px #0000001a;transition:transform .3s ease,box-shadow .3s ease}.energy-summary-card[data-v-0dc47613]:hover{transform:translateY(-5px);box-shadow:0 4px 8px #0003}.energy-summary-icon[data-v-0dc47613]{display:flex;align-items:center;justify-content:center;width:50px;height:50px;border-radius:50%;margin-right:16px}.energy-summary-icon .mdi[data-v-0dc47613]{font-size:24px;color:#fff}.energy-summary-content[data-v-0dc47613]{flex:1}.energy-summary-title[data-v-0dc47613]{font-size:14px;color:var(--secondary-text-color);margin-bottom:4px}.energy-summary-value[data-v-0dc47613]{font-size:24px;font-weight:600;color:var(--primary-text-color)}.energy-summary-card.solar .energy-summary-icon[data-v-0dc47613]{background-color:#ff9800}.energy-summary-card.grid .energy-summary-icon[data-v-0dc47613]{background-color:#673ab7}.energy-summary-card.load .energy-summary-icon[data-v-0dc47613]{background-color:#f44336}.energy-summary-card.battery .energy-summary-icon[data-v-0dc47613]{background-color:#00bcd4}.energy-summary-card.grid-buy .energy-summary-icon[data-v-0dc47613]{background-color:#9c27b0}.energy-summary-card.battery-discharge .energy-summary-icon[data-v-0dc47613]{background-color:#009688}@media (max-width: 600px){.energy-summary-grid[data-v-0dc47613]{grid-template-columns:repeat(2,1fr);gap:8px}.energy-summary-card[data-v-0dc47613]{padding:10px}.energy-summary-icon[data-v-0dc47613]{width:40px;height:40px;margin-right:10px}.energy-summary-icon .mdi[data-v-0dc47613]{font-size:20px}.energy-summary-title[data-v-0dc47613]{font-size:12px}.energy-summary-value[data-v-0dc47613]{font-size:18px}}.ai-plan-card[data-v-0dc47613]{background:var(--card-background-color);border-radius:8px;padding:16px;display:flex;align-items:center;box-shadow:0 2px 4px #0000001a;height:auto;min-height:60px;z-index:10;position:relative}.ai-plan-card label[data-v-0dc47613]{margin-right:12px;font-weight:500}.ai-plan-value[data-v-0dc47613]{flex:1;padding:8px 12px;border-radius:4px;background-color:#ff98001a;color:var(--primary-color);font-weight:500;text-align:center}.device-switch-container[data-v-0dc47613]{display:flex;justify-content:flex-end;margin-top:8px}.switch[data-v-0dc47613]{position:relative;display:inline-block;width:50px;height:24px;margin-right:8px}.switch input[data-v-0dc47613]{opacity:0;width:0;height:0}.slider[data-v-0dc47613]{position:absolute;cursor:pointer;inset:0;background-color:#ccc;transition:.4s}.slider[data-v-0dc47613]:before{position:absolute;content:\"\";height:16px;width:16px;left:4px;bottom:4px;background-color:#fff;transition:.4s}input:checked+.slider[data-v-0dc47613]{background-color:var(--primary-color, #4CAF50)}input:focus+.slider[data-v-0dc47613]{box-shadow:0 0 1px var(--primary-color, #4CAF50)}input:checked+.slider[data-v-0dc47613]:before{transform:translate(26px)}.slider.round[data-v-0dc47613]{border-radius:24px}.slider.round[data-v-0dc47613]:before{border-radius:50%}.switch-label[data-v-0dc47613]{margin-left:60px;line-height:24px;font-size:12px;font-weight:500;color:var(--primary-text-color)}.sub-group-header[data-v-0dc47613]{display:flex;justify-content:space-between;align-items:center;padding:8px 16px;background-color:var(--card-background-color);border-radius:4px;margin-bottom:8px}.sub-group-name[data-v-0dc47613]{font-weight:500;color:var(--primary-text-color)}.entity-value-container[data-v-0dc47613]{display:flex;flex-direction:column;align-items:flex-end}.device-switch-button[data-v-0dc47613],.device-switch-button.on[data-v-0dc47613],.device-switch-button.off[data-v-0dc47613],.device-switch-button[data-v-0dc47613]:hover{display:none}@media (max-width: 600px){.switch[data-v-0dc47613]{width:40px;height:20px}.slider[data-v-0dc47613]:before{height:14px;width:14px;left:3px;bottom:3px}input:checked+.slider[data-v-0dc47613]:before{transform:translate(20px)}.switch-label[data-v-0dc47613]{margin-left:45px;font-size:10px}}.configuration-help[data-v-0dc47613]{background:var(--card-background-color);border-radius:8px;padding:20px;margin:16px 0;box-shadow:0 2px 4px #0000001a;color:var(--primary-text-color)}.configuration-help h2[data-v-0dc47613]{color:var(--error-color, #eb5757);margin-top:0}.configuration-help ol[data-v-0dc47613]{padding-left:20px}.configuration-help pre[data-v-0dc47613]{background:#0000000d;padding:12px;border-radius:4px;overflow-x:auto;font-family:monospace;margin:8px 0}.credentials-form[data-v-0dc47613]{max-width:400px;margin:40px auto;padding:24px;background:var(--card-background-color);border-radius:8px;box-shadow:0 2px 8px #00000026;color:var(--primary-text-color)}.credentials-form h2[data-v-0dc47613]{margin-top:0;text-align:center;color:var(--primary-color);margin-bottom:16px}.credentials-form p[data-v-0dc47613]{text-align:center;margin-bottom:24px;color:var(--secondary-text-color)}.form-group[data-v-0dc47613]{margin-bottom:16px}.form-group label[data-v-0dc47613]{display:block;margin-bottom:8px;font-weight:500}.form-group input[type=text][data-v-0dc47613],.form-group input[type=password][data-v-0dc47613]{width:100%;padding:10px;border-radius:4px;border:1px solid var(--divider-color);background-color:var(--card-background-color);color:var(--primary-text-color);font-size:14px;box-sizing:border-box}.checkbox-container[data-v-0dc47613]{display:flex;align-items:center;cursor:pointer;user-select:none;font-size:14px}.checkbox-container input[data-v-0dc47613]{margin-right:8px}.login-button[data-v-0dc47613]{width:100%;padding:10px;margin-top:16px;background-color:var(--primary-color);color:#fff;border:none;border-radius:4px;font-size:14px;font-weight:500;cursor:pointer;transition:background-color .3s}.login-button[data-v-0dc47613]:hover{background-color:var(--light-primary-color)}.login-button[data-v-0dc47613]:disabled{background-color:var(--disabled-color, #cccccc);cursor:not-allowed}.error-message[data-v-0dc47613]{margin-top:16px;padding:10px;background-color:#eb57571a;color:var(--error-color, #eb5757);border-radius:4px;text-align:center;font-size:14px}.chart-title[data-v-0dc47613]{text-align:center;font-size:16px;margin:0 0 12px;color:var(--primary-text-color);font-weight:500}";
 
 const _export_sfc = (sfc, props) => {
   const target = sfc.__vccOpts || sfc;
@@ -98744,7 +98762,7 @@ const _hoisted_12 = {
   class: "error-message"
 };
 const _hoisted_13 = {
-  key: 1,
+  key: 2,
   class: "auth-prompt"
 };
 const _hoisted_14 = { class: "auth-prompt-content" };
@@ -98826,10 +98844,10 @@ const _hoisted_69 = { class: "energy-summary-value" };
 // const i18n = createI18n({
 //   locale: 'en',
 //   messages,
-  // legacy: false,
-  // fallbackLocale: 'en',
-  // globalInjection: true,
-  // useScope: 'global'
+// legacy: false,
+// fallbackLocale: 'en',
+// globalInjection: true,
+// useScope: 'global'
 // })
 // props.locale = 'en'
 // // 通过 provide 注入 i18n
@@ -98889,11 +98907,11 @@ console.log('i18n获取完毕:', i18n);
 //   i18n.locale.value = props.locale
 // })
 
-const {t,locale} = i18n;
+const {t, locale} = i18n;
 console.log('locale:', locale.value);
-console.log('messages:', i18n.messages.value);
-console.log(t('title'));
-console.log(t('panel.title'));
+// console.log('messages:', i18n.messages.value)
+// console.log(t('title'))
+// console.log(t('panel.title'))
 // console.log('t:', t)
 // 从hass对象中获取配置
 const loadConfigFromHass = () => {
@@ -98907,9 +98925,6 @@ const loadConfigFromHass = () => {
         credentials.value = {
           username: config.username || '',
           password: config.password || '',
-          api_url: config.api_url || '',
-          plant_id: config.plant_id || '',
-          remember: true
         };
         return true;
       }
@@ -98922,9 +98937,6 @@ const loadConfigFromHass = () => {
       credentials.value = {
         username: config.username || '',
         password: config.password || '',
-        api_url: config.api_url || '',
-        plant_id: config.plant_id || '',
-        remember: true
       };
       return true;
     }
@@ -98934,9 +98946,6 @@ const loadConfigFromHass = () => {
       credentials.value = {
         username: props.config.username || '',
         password: props.config.password || '',
-        api_url: props.config.api_url || '',
-        plant_id: props.config.plant_id || '',
-        remember: true
       };
       return true;
     }
@@ -98951,18 +98960,8 @@ const loadConfigFromHass = () => {
 // 保存配置到hass对象
 const saveConfigToHass = async () => {
   try {
-    // 如果hass对象可用，尝试保存到集成配置中
-    // if (props.hass && props.hass.callService) {
-    //   // 调用服务保存配置
-    //   await props.hass.callService('aecc', 'save_config', {
-    //     username: credentials.value.username,
-    //     password: credentials.value.password,
-    //   });
-    //   console.log('配置已保存到Home Assistant集成');
-    // }
 
     // 同时保存到localStorage作为备份
-
     localStorage.setItem('aecc_config', JSON.stringify({
       username: credentials.value.username,
       password: credentials.value.password,
@@ -99055,10 +99054,14 @@ onMounted(() => {
       attributes: state.attributes
     })));
   }
-  localStorage.setItem('language', props.hass.config ? props.hass.config.language.split("-")[0] + "-" + props.hass.config.country : 'en-US');
+  const locale1 = props.hass.config.language.split("-")[0] + "-" + props.hass.config.country;
+  localStorage.setItem('language', locale1);
   // console.log('i18n.loacle:', i18n.locale)
-  props.locale = localStorage.getItem('language');// 添加窗口大小变化监听
+  props.locale = locale1;// 添加窗口大小变化监听
+  locale.value = locale1;
+  console.log('i18n.loacle:', locale.value);
   window.addEventListener('resize', handleResize);
+
 });
 
 const onPlantChange = async () => {
@@ -99559,6 +99562,12 @@ const updateCharts = async (energyFlowData) => {
         };
         // console.log("[ha-vue-card] 使用真实能流图数据:", simulatedData.value);
       }
+
+      // 保存热泵设备列表
+      if (energyFlowData && energyFlowData.heatPumpList) {
+        deviceInfo.value.heatPumpList = energyFlowData.heatPumpList;
+        console.log("[ha-vue-card] 获取到热泵设备列表:", deviceInfo.value.heatPumpList);
+      }
     }
   } catch (error) {
     console.error("[ha-vue-card] 获取能流图数据失败:", error);
@@ -100050,6 +100059,27 @@ const updateEntityGroups = async () => {
       }
     }
 
+    // 获取热泵设备详细信息
+    if (deviceInfo.value.heatPumpList && deviceInfo.value.heatPumpList.length > 0) {
+      console.log("[ha-vue-card] 获取热泵设备详细信息", deviceInfo.value.heatPumpList);
+      deviceDetailInfo.value.heatPumps = [];
+      for (const heatPump of deviceInfo.value.heatPumpList) {
+        try {
+          if (heatPump.deviceSn && heatPump.iconType) {
+            const heatPumpInfo = await getDeviceBySn(heatPump.iconType, heatPump.deviceSn);
+            deviceDetailInfo.value.heatPumps.push({
+              deviceSn: heatPump.deviceSn,
+              iconType: heatPump.iconType,
+              details: heatPumpInfo
+            });
+            console.log("[ha-vue-card] 获取热泵设备详细信息:", heatPumpInfo);
+          }
+        } catch (error) {
+          console.error("[ha-vue-card] 获取热泵设备详细信息失败:", error);
+        }
+      }
+    }
+
     // 更新实体组数据
     updateEntityGroupsFromDeviceInfo();
   } catch (error) {
@@ -100114,6 +100144,23 @@ const updateEntityGroupsFromDeviceInfo = () => {
         switchStatus: charger.switchStatus
       })),
       subGroups: generateChargerSubGroups()
+    });
+  }
+
+  // 添加热泵设备组
+  if (deviceInfo.value.heatPumpList && deviceInfo.value.heatPumpList.length > 0) {
+    newGroups.push({
+      name: t('device.heatpump'),
+      expanded: false,
+      entities: deviceInfo.value.heatPumpList.map(heatPump => ({
+        id: `heatpump.${heatPump.deviceSn}`,
+        description: `Heat Pump ${heatPump.deviceSn}`,
+        value: heatPump.deviceSn,
+        unit: '',
+        type:heatPump.type,
+        switchStatus: heatPump.switchStatus
+      })),
+      subGroups: generateHeatPumpSubGroups()
     });
   }
 
@@ -100325,6 +100372,59 @@ const generateChargerSubGroups = () => {
   return subGroups;
 };
 
+// 生成热泵子组
+const generateHeatPumpSubGroups = () => {
+  const subGroups = [];
+
+  if (deviceDetailInfo.value.heatPumps && deviceDetailInfo.value.heatPumps.length > 0) {
+    for (const heatPump of deviceDetailInfo.value.heatPumps) {
+      if (heatPump.details && heatPump.details.deviceInfoMap) {
+        const deviceInfoMap = heatPump.details.deviceInfoMap;
+
+        // 为每个热泵设备创建一个子组
+        const subGroup = {
+          name: `Heat Pump ${heatPump.deviceSn}`,
+          expanded: false,
+          entities: []
+        };
+
+        // 遍历每个分类（如"基础信息"等）
+        for (const [category, items] of Object.entries(deviceInfoMap)) {
+          // 遍历该分类下的所有键值对
+          for (const [key, value] of Object.entries(items)) {
+            if (value !== null && value !== undefined) {
+              // 提取单位（如果有）
+              let displayValue = value;
+              let unit = '';
+
+              // 尝试从值中提取单位，比如"200.0W"中的"W"
+              const match = String(value).match(/^([\d.]+)(\D+)$/);
+              if (match) {
+                displayValue = match[1];
+                unit = match[2];
+              }
+
+              subGroup.entities.push({
+                id: `heatpump.${heatPump.deviceSn}.${category}.${key}`,
+                description: key,
+                value: displayValue,
+                unit: unit
+              });
+            }
+          }
+        }
+
+        // 只添加有实体的子组
+        if (subGroup.entities.length > 0) {
+          subGroups.push(subGroup);
+        }
+      }
+    }
+  }
+
+  return subGroups;
+};
+
 // Home Assistant Web Component 生命周期方法
 const setConfig = (config) => {
   console.log('[ha-vue-card] setConfig被调用', config);
@@ -100384,6 +100484,11 @@ const deviceInfo = ref({
   // 电表
   emSn: '',
   emType: '',
+  // 热泵设备列表
+  heatPumpList: [],
+  // 负载和充电桩设备列表
+  loadList: [],
+  chargerList: [],
   //....
 });
 
@@ -100391,8 +100496,9 @@ const deviceInfo = ref({
 const deviceDetailInfo = ref({
   inv: null, // 逆变器详细信息
   bat: null,   // Battery详细信息
-  load: null, // Load详细信息
-  charger: null, // Charger详细信息
+  loads: [], // Load详细信息列表
+  chargers: [], // Charger详细信息列表
+  heatPumps: [], // 热泵详细信息列表
   em: null, // 电表详细信息
   solar: null, // 太阳能详细信息
   grid: null, // Grid详细信息
@@ -100402,14 +100508,75 @@ const deviceDetailInfo = ref({
 const aiPlanState = ref();
 aiPlanState.value = t('state.loading');
 
+// 消息提示状态
+const message = ref({
+  show: false,
+  text: '',
+  type: 'success',
+  timer: null
+});
+
+// 显示消息提示
+const showMessage = (text, type = 'success', duration = 3000) => {
+  // 清除之前的定时器
+  if (message.value.timer) {
+    clearTimeout(message.value.timer);
+  }
+  
+  // 设置新消息
+  message.value = {
+    show: true,
+    text,
+    type,
+    timer: null
+  };
+  
+  // 设置定时器自动关闭
+  message.value.timer = setTimeout(() => {
+    message.value.show = false;
+  }, duration);
+};
+
 // 获取AI绿电计划数据
 const fetchAiPlanData = async () => {
   try {
     const aiData = await getAiSystemByPlantId(selectedPlantId.value);
     console.log(t('logs.energy_flow_object'), aiData);
     if (aiData) {
+      let modeStr = "--";
       // 根据Python逻辑处理AI状态
-      aiPlanState.value = aiData.modeStr;
+      if (aiData && aiData.antiRefluxSet === 1) {
+        if (aiData.powerTimeSetVos && aiData.powerTimeSetVos.length > 0) {
+          switch (aiData.powerTimeSetVos[0].mode) {
+            case 0:
+              modeStr = "波峰";
+              break;
+            case 1:
+              modeStr = "波谷";
+              break;
+            case 2:
+              modeStr = "负电价";
+              break;
+            case 3:
+              modeStr = "智能联动";
+              break;
+            case 4:
+              modeStr = "守护模式";
+              break;
+          }
+        } else if (ai.powerMode === 1) {
+          modeStr = "零馈电";
+        } else if (ai.powerMode === 0) {
+          modeStr = "智能联动";
+        } else {
+          modeStr = "关闭";
+        }
+      } else {
+        modeStr = "关闭";
+      }
+
+
+      aiPlanState.value = modeStr;
     } else {
       aiPlanState.value = t('state.no_data');
     }
@@ -100426,6 +100593,7 @@ const toggleLoad = async (deviceSn) => {
     const loadDevice = deviceInfo.value.loadList.find(load => load.deviceSn === deviceSn);
     if (!loadDevice) {
       console.error(`[ha-vue-card] 未找到Load设备: ${deviceSn}`);
+      showMessage(t('device.device_not_found'), 'error');
       return;
     }
 
@@ -100433,17 +100601,29 @@ const toggleLoad = async (deviceSn) => {
     const newStatus = loadDevice.switchStatus === 1 ? 0 : 1;
 
     // 调用API设置状态
-    await setLoadStatus(deviceSn, newStatus);
+    const response = await changeSocketSwitchStatus(newStatus, deviceSn);
+    
+    // 检查返回结果
+    if (response && response.result === 0) {
+      console.log(response);
+      // 成功
+      showMessage(t('device.switch_success'), 'success');
+      
+      // 更新本地状态
+      loadDevice.switchStatus = newStatus;
 
-    // 更新本地状态
-    loadDevice.switchStatus = newStatus;
-
-    // 更新UI
-    updateEntityGroupsFromDeviceInfo();
-
-    console.log(`[ha-vue-card] 切换Load设备 ${deviceSn} 状态为: ${newStatus}`);
+      // 更新UI
+      updateEntityGroupsFromDeviceInfo();
+      
+      console.log(`[ha-vue-card] 切换Load设备 ${deviceSn} 状态为: ${newStatus}`);
+    } else {
+      // 失败
+      showMessage(response && response.msg ? response.msg : t('device.switch_failed'), 'error');
+      console.error(`[ha-vue-card] 切换Load设备状态失败:`, response);
+    }
   } catch (error) {
     console.error(`[ha-vue-card] 切换Load设备状态失败:`, error);
+    showMessage(error.message || t('device.switch_failed'), 'error');
   }
 };
 
@@ -100454,6 +100634,7 @@ const toggleCharger = async (deviceSn) => {
     const chargerDevice = deviceInfo.value.chargerList.find(charger => charger.deviceSn === deviceSn);
     if (!chargerDevice) {
       console.error(`[ha-vue-card] 未找到Charger设备: ${deviceSn}`);
+      showMessage(t('device.device_not_found'), 'error');
       return;
     }
 
@@ -100461,23 +100642,85 @@ const toggleCharger = async (deviceSn) => {
     const newStatus = chargerDevice.switchStatus === 1 ? 0 : 1;
 
     // 调用API设置状态
-    await setChargerStatus(deviceSn, newStatus);
+    const response = await changeChargerSwitchStatus(newStatus, deviceSn);
+    console.log(response);
+    // 检查返回结果
+    if (response && response.result === 0) {
+      // 成功
+      showMessage(t('device.switch_success'), 'success');
+      
+      // 更新本地状态
+      chargerDevice.switchStatus = newStatus;
 
-    // 更新本地状态
-    chargerDevice.switchStatus = newStatus;
-
-    // 更新UI
-    updateEntityGroupsFromDeviceInfo();
-
-    console.log(`[ha-vue-card] 切换Charger设备 ${deviceSn} 状态为: ${newStatus}`);
+      // 更新UI
+      updateEntityGroupsFromDeviceInfo();
+      
+      console.log(`[ha-vue-card] 切换Charger设备 ${deviceSn} 状态为: ${newStatus}`);
+    } else {
+      // 失败
+      showMessage(response && response.msg ? response.msg : t('device.switch_failed'), 'error');
+      console.error(`[ha-vue-card] 切换Charger设备状态失败:`, response);
+    }
   } catch (error) {
     console.error(`[ha-vue-card] 切换Charger设备状态失败:`, error);
+    showMessage(error.message || t('device.switch_failed'), 'error');
+  }
+};
+
+// 控制热泵设备开关
+const toggleHeatPump = async (deviceSn) => {
+  try {
+    // 找到对应的设备
+    const heatPumpDevice = deviceInfo.value.heatPumpList.find(heatPump => heatPump.deviceSn === deviceSn);
+    if (!heatPumpDevice) {
+      console.error(`[ha-vue-card] 未找到热泵设备: ${deviceSn}`);
+      showMessage(t('device.device_not_found'), 'error');
+      return;
+    }
+
+    // 切换状态 (0 -> 1 或 1 -> 0)
+    const newStatus = heatPumpDevice.switchStatus === 1 ? 0 : 1;
+
+    // 调用API设置状态
+    const response = await switchPowerControl(newStatus, deviceSn,heatPumpDevice.type);
+    console.log(response);
+    // 检查返回结果
+    if (response && response.result === 0) {
+      // 成功
+      showMessage(t('device.switch_success'), 'success');
+      
+      // 更新本地状态
+      heatPumpDevice.switchStatus = newStatus;
+
+      // 更新UI
+      updateEntityGroupsFromDeviceInfo();
+      
+      console.log(`[ha-vue-card] 切换热泵设备 ${deviceSn} 状态为: ${newStatus}`);
+    } else {
+      // 失败
+      showMessage(response && response.msg ? response.msg : t('device.switch_failed'), 'error');
+      console.error(`[ha-vue-card] 切换热泵设备状态失败:`, response);
+    }
+  } catch (error) {
+    console.error(`[ha-vue-card] 切换热泵设备状态失败:`, error);
+    showMessage(error.message || t('device.switch_failed'), 'error');
   }
 };
 
 
 return (_ctx, _cache) => {
   return (openBlock(), createElementBlock("div", _hoisted_1$1, [
+    (message.value.show)
+      ? (openBlock(), createElementBlock("div", {
+          key: 0,
+          class: normalizeClass(['message-toast', message.value.type])
+        }, [
+          createBaseVNode("span", {
+            class: normalizeClass(["mdi", message.value.type === 'success' ? 'mdi-check-circle' : 'mdi-alert-circle'])
+          }, null, 2),
+          createBaseVNode("span", null, toDisplayString$1(message.value.text), 1)
+        ], 2))
+      : createCommentVNode("", true),
     createBaseVNode("div", _hoisted_2, [
       createBaseVNode("h2", null, toDisplayString$1(unref(t)('panel.title')), 1),
       createBaseVNode("button", {
@@ -100489,7 +100732,7 @@ return (_ctx, _cache) => {
     ]),
     (showConfigDialog.value)
       ? (openBlock(), createElementBlock("div", {
-          key: 0,
+          key: 1,
           class: "config-dialog-overlay",
           onClick: _cache[5] || (_cache[5] = $event => (showConfigDialog.value = false))
         }, [
@@ -100554,7 +100797,7 @@ return (_ctx, _cache) => {
             createBaseVNode("p", null, toDisplayString$1(unref(t)('panel.auth_prompt.message')), 1)
           ])
         ]))
-      : (openBlock(), createElementBlock(Fragment, { key: 2 }, [
+      : (openBlock(), createElementBlock(Fragment, { key: 3 }, [
           createBaseVNode("div", _hoisted_15, [
             createBaseVNode("label", _hoisted_16, toDisplayString$1(unref(t)('plant.label')), 1),
             withDirectives(createBaseVNode("select", {
@@ -100625,13 +100868,15 @@ return (_ctx, _cache) => {
                             ]),
                             createBaseVNode("div", _hoisted_31, [
                               createBaseVNode("div", _hoisted_32, toDisplayString$1(entity.value) + toDisplayString$1(entity.unit), 1),
-                              (group.name === 'Load Devices' || group.name === 'Charger Devices')
+                              (group.name === unref(t)('device.load') || group.name === unref(t)('device.charger') || group.name === unref(t)('device.heatpump'))
                                 ? (openBlock(), createElementBlock("div", _hoisted_33, [
                                     createBaseVNode("label", _hoisted_34, [
                                       createBaseVNode("input", {
                                         type: "checkbox",
                                         checked: entity.switchStatus === 1,
-                                        onChange: $event => (group.name === 'Load Devices' ? toggleLoad(entity.value) : toggleCharger(entity.value))
+                                        onChange: $event => (group.name === unref(t)('device.load') ? toggleLoad(entity.value) : 
+                                     group.name === unref(t)('device.charger') ? toggleCharger(entity.value) : 
+                                     toggleHeatPump(entity.value))
                                       }, null, 40, _hoisted_35),
                                       _cache[10] || (_cache[10] = createBaseVNode("span", { class: "slider round" }, null, -1)),
                                       createBaseVNode("span", _hoisted_36, toDisplayString$1(entity.switchStatus === 1 ? unref(t)('entity_groups.switch.on') :
@@ -100691,7 +100936,7 @@ return (_ctx, _cache) => {
                   ], -1)),
                   createBaseVNode("div", _hoisted_47, [
                     createBaseVNode("div", _hoisted_48, toDisplayString$1(unref(t)('energy.solar')), 1),
-                    createBaseVNode("div", _hoisted_49, toDisplayString$1(energySummary.value.solarDayElec.toFixed(2)), 1)
+                    createBaseVNode("div", _hoisted_49, toDisplayString$1(energySummary.value.solarDayElec.toFixed(2)) + " kWh", 1)
                   ])
                 ]),
                 createBaseVNode("div", _hoisted_50, [
@@ -100700,7 +100945,7 @@ return (_ctx, _cache) => {
                   ], -1)),
                   createBaseVNode("div", _hoisted_51, [
                     createBaseVNode("div", _hoisted_52, toDisplayString$1(unref(t)('energy.grid')), 1),
-                    createBaseVNode("div", _hoisted_53, toDisplayString$1(energySummary.value.gridDayElec.toFixed(2)), 1)
+                    createBaseVNode("div", _hoisted_53, toDisplayString$1(energySummary.value.gridDayElec.toFixed(2)) + " kWh", 1)
                   ])
                 ]),
                 createBaseVNode("div", _hoisted_54, [
@@ -100709,7 +100954,7 @@ return (_ctx, _cache) => {
                   ], -1)),
                   createBaseVNode("div", _hoisted_55, [
                     createBaseVNode("div", _hoisted_56, toDisplayString$1(unref(t)('energy.load')), 1),
-                    createBaseVNode("div", _hoisted_57, toDisplayString$1(energySummary.value.loadDayElec.toFixed(2)), 1)
+                    createBaseVNode("div", _hoisted_57, toDisplayString$1(energySummary.value.loadDayElec.toFixed(2)) + " kWh", 1)
                   ])
                 ]),
                 createBaseVNode("div", _hoisted_58, [
@@ -100718,7 +100963,7 @@ return (_ctx, _cache) => {
                   ], -1)),
                   createBaseVNode("div", _hoisted_59, [
                     createBaseVNode("div", _hoisted_60, toDisplayString$1(unref(t)('energy.battery')), 1),
-                    createBaseVNode("div", _hoisted_61, toDisplayString$1(energySummary.value.batteryDayElec.toFixed(2)), 1)
+                    createBaseVNode("div", _hoisted_61, toDisplayString$1(energySummary.value.batteryDayElec.toFixed(2)) + " kWh", 1)
                   ])
                 ]),
                 createBaseVNode("div", _hoisted_62, [
@@ -100727,7 +100972,7 @@ return (_ctx, _cache) => {
                   ], -1)),
                   createBaseVNode("div", _hoisted_63, [
                     createBaseVNode("div", _hoisted_64, toDisplayString$1(unref(t)('energy.grid_buy')), 1),
-                    createBaseVNode("div", _hoisted_65, toDisplayString$1(energySummary.value.gridBuyDayElec.toFixed(2)), 1)
+                    createBaseVNode("div", _hoisted_65, toDisplayString$1(energySummary.value.gridBuyDayElec.toFixed(2)) + " kWh", 1)
                   ])
                 ]),
                 createBaseVNode("div", _hoisted_66, [
@@ -100736,7 +100981,7 @@ return (_ctx, _cache) => {
                   ], -1)),
                   createBaseVNode("div", _hoisted_67, [
                     createBaseVNode("div", _hoisted_68, toDisplayString$1(unref(t)('energy.battery_discharge')), 1),
-                    createBaseVNode("div", _hoisted_69, toDisplayString$1(energySummary.value.batteryDischargeDayElec.toFixed(2)), 1)
+                    createBaseVNode("div", _hoisted_69, toDisplayString$1(energySummary.value.batteryDischargeDayElec.toFixed(2)) + " kWh", 1)
                   ])
                 ])
               ])
@@ -100748,7 +100993,7 @@ return (_ctx, _cache) => {
 }
 
 };
-const HaVueCard = /*#__PURE__*/_export_sfc(_sfc_main$2, [['styles',[_style_0]],['__scopeId',"data-v-e08310f3"]]);
+const HaVueCard = /*#__PURE__*/_export_sfc(_sfc_main$2, [['styles',[_style_0]],['__scopeId',"data-v-0dc47613"]]);
 
 const _sfc_main$1 = {  };
 

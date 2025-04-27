@@ -16,13 +16,18 @@
   "device.detail_section": "Details",
   "device.battery": "Battery",
   "device.meter": "Meter",
+  "device.load": "Load Devices",
+  "device.heatpump": "heatPump Devices",
   "device.load_devices": "Load Devices",
+  "device.charger": "Charger Devices",
   "device.charger_devices": "Charger Devices",
   "entity_groups.load_devices": "Load Devices",
   "entity_groups.charger_devices": "Charger Devices",
   "entity_groups.switch.on": "ON",
   "entity_groups.switch.off": "OFF",
-  "energy.title": "Energy (kWh)",
+  "device.switch_failed": "failed",
+  "device.switch_success": "success",
+  "energy.title": "Energy",
   "energy.solar": "Solar Energy",
   "energy.grid": "Grid Energy",
   "energy.load": "Load Energy",
@@ -53,4 +58,5 @@
   "logs.all_data_updated": "All data updated after plant switch",
   "logs.initializing_data": "Starting to initialize data...",
   "logs.all_data_initialized": "All data initialization completed"
+
 }
