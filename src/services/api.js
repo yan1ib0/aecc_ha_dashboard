@@ -103,12 +103,13 @@ const getBaseUrl = () => {
     // 默认直接连接目标服务器 - 需要服务器支持CORS
     // 本地调试
     // if (isDevelopment) {
-    //   return 'http://192.168.3.7';
+    //       return 'http://192.168.3.7:80'
     // }
+
     // 生产环境
-    // return 'https://monitor.ai-ec.cloud:8443';
+    return 'https://monitor.ai-ec.cloud:8443';
     // return 'http://monitor.ai-ec.cloud:8199'
-    return 'http://192.168.3.7:80'
+    // return 'http://192.168.3.7:80'
 };
 
 // 创建axios实例 - 根据环境使用不同的baseURL

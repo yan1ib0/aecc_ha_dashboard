@@ -94599,7 +94599,7 @@ const getBaseUrl = () => {
       return "http://supervisor/core/api/hassio_ingress/xxx";
     }
   }
-  return "http://192.168.3.7:80";
+  return "https://monitor.ai-ec.cloud:8443";
 };
 const api = axios.create({
   baseURL: getBaseUrl(),
