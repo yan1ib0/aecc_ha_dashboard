@@ -94599,7 +94599,7 @@ const getBaseUrl = () => {
       return "http://supervisor/core/api/hassio_ingress/xxx";
     }
   }
-  return "https://monitor.ai-ec.cloud:8443";
+  return "http://192.168.3.7:80";
 };
 const api = axios.create({
   baseURL: getBaseUrl(),
@@ -94612,38 +94612,13 @@ const api = axios.create({
   withCredentials: true
   // 允许跨域请求携带cookie
 });
-const getCookies = () => {
-  const cookies = document.cookie.split(";").reduce((cookieObj, cookie) => {
-    const [name, value] = cookie.trim().split("=");
-    cookieObj[name] = value;
-    return cookieObj;
-  }, {});
-  return cookies;
-};
-const extractJSESSIONID = (cookieStr) => {
-  if (!cookieStr) return null;
-  const match = cookieStr.match(/JSESSIONID=([^;]+)/);
-  return match ? match[1] : null;
-};
 api.interceptors.request.use(
   (config) => {
     if (config.method === "post" && config.params) {
       config.headers["Content-Type"] = "application/x-www-form-urlencoded";
     }
-    if (currentJSESSIONID) {
-      config.headers["Cookie"] = `JSESSIONID=${currentJSESSIONID}; Path=/; SameSite=None;Secure; HttpOnly`;
-      config.headers["Same-Site"] = "None";
-      config.headers["Secure"] = true;
-      console.log("使用保存的JSESSIONID:", currentJSESSIONID);
-    } else {
-      const cookies = getCookies();
-      if (cookies.JSESSIONID) {
-        currentJSESSIONID = cookies.JSESSIONID;
-        config.headers["Cookie"] = `JSESSIONID=${currentJSESSIONID}; Path=/; SameSite=None;Secure; HttpOnly`;
-      }
-    }
     config.headers["Accept-Language"] = getHaLanguage();
-    config.withCredentials = true;
+    config.headers["token"] = localStorage.getItem("token");
     console.log("发送请求:", config.url, "请求头:", JSON.stringify(config.headers));
     return config;
   },
@@ -94697,20 +94672,8 @@ const login = async (username, password) => {
       appVersion: "V1.1"
     });
     if (response) {
-      const setCookieHeader = response.headers && response.headers["set-cookie"];
-      if (setCookieHeader) {
-        const newJSESSIONID = extractJSESSIONID(setCookieHeader.toString());
-        if (newJSESSIONID) {
-          currentJSESSIONID = newJSESSIONID;
-        }
-      }
       startSessionRenewal();
-      if (!currentJSESSIONID) {
-        const cookies = getCookies();
-        if (cookies.JSESSIONID) {
-          currentJSESSIONID = cookies.JSESSIONID;
-        }
-      }
+      localStorage.setItem("token", response.user.token);
       return response;
     }
   } catch (error) {
@@ -94741,6 +94704,10 @@ const renewSession = async () => {
       phoneModel: "1.1",
       appVersion: "V1.1"
     });
+    console.log("会话续期响应:", response);
+    if (response) {
+      localStorage.setItem("token", response.user.token);
+    }
   } catch (error) {
     console.error("会话续期失败:", error);
   }

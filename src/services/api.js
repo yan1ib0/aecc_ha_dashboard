@@ -106,7 +106,9 @@ const getBaseUrl = () => {
     //   return 'http://192.168.3.7';
     // }
     // 生产环境
-    return 'https://monitor.ai-ec.cloud:8443';
+    // return 'https://monitor.ai-ec.cloud:8443';
+    // return 'http://monitor.ai-ec.cloud:8199'
+    return 'http://192.168.3.7:80'
 };
 
 // 创建axios实例 - 根据环境使用不同的baseURL
@@ -120,22 +122,6 @@ const api = axios.create({
     withCredentials: true // 允许跨域请求携带cookie
 });
 
-// 获取当前浏览器中的所有cookie
-const getCookies = () => {
-    const cookies = document.cookie.split(';').reduce((cookieObj, cookie) => {
-        const [name, value] = cookie.trim().split('=');
-        cookieObj[name] = value;
-        return cookieObj;
-    }, {});
-    return cookies;
-};
-
-// 从cookie字符串中提取JSESSIONID
-const extractJSESSIONID = (cookieStr) => {
-    if (!cookieStr) return null;
-    const match = cookieStr.match(/JSESSIONID=([^;]+)/);
-    return match ? match[1] : null;
-};
 
 // 请求拦截器
 api.interceptors.request.use(
@@ -144,34 +130,9 @@ api.interceptors.request.use(
         if (config.method === 'post' && config.params) {
             config.headers['Content-Type'] = 'application/x-www-form-urlencoded';
         }
-
-        // 如果有当前会话ID，手动添加到请求中
-        if (currentJSESSIONID) {
-            config.headers['Cookie'] = `JSESSIONID=${currentJSESSIONID}; Path=/; SameSite=None;Secure; HttpOnly`;
-
-            config.headers['Same-Site'] = 'None';
-            config.headers['Secure'] = true;
-            console.log('使用保存的JSESSIONID:', currentJSESSIONID);
-        } else {
-            // 尝试从当前浏览器cookie中获取
-            const cookies = getCookies();
-            if (cookies.JSESSIONID) {
-                currentJSESSIONID = cookies.JSESSIONID;
-                // 配置same-site
-                config.headers['Cookie'] = `JSESSIONID=${currentJSESSIONID}; Path=/; SameSite=None;Secure; HttpOnly`;
-                // console.log('从浏览器cookie获取JSESSIONID:', currentJSESSIONID);
-            }
-        }
-
         // 添加语言支持到请求头
         config.headers['Accept-Language'] = getHaLanguage();
-
-        // 在生产环境添加额外的认证头
-        if (!isDevelopment) {
-            // 可以添加token等认证信息
-            // config.headers['Authorization'] = `Bearer ${localStorage.getItem('token')}`;
-        }
-        config.withCredentials = true;  // 全局生效
+        config.headers['token'] = localStorage.getItem('token')
         console.log('发送请求:', config.url, '请求头:', JSON.stringify(config.headers));
         return config;
     },
@@ -190,7 +151,6 @@ api.interceptors.response.use(
         if (data === undefined) {
             return Promise.reject(new Error('响应数据格式错误'));
         }
-
         // 检查业务状态码
         if (data.result !== 0) {
             // 业务逻辑错误
@@ -198,7 +158,6 @@ api.interceptors.response.use(
             error.code = data.result;
             return Promise.reject(error);
         }
-
         // 正常响应，返回业务数据
         return data.obj;
     },
@@ -249,26 +208,9 @@ export const login = async (username, password) => {
 
         // 尝试从响应中获取新的JSESSIONID
         if (response) {
-            const setCookieHeader = response.headers && response.headers['set-cookie'];
-            if (setCookieHeader) {
-                const newJSESSIONID = extractJSESSIONID(setCookieHeader.toString());
-                if (newJSESSIONID) {
-                    currentJSESSIONID = newJSESSIONID;
-                    // console.log('登录获取新JSESSIONID:', currentJSESSIONID);
-                }
-            }
-
             // 登录成功，启动会话续期定时器
             startSessionRenewal();
-
-            // 如果没有从响应头获取到，尝试从cookie获取
-            if (!currentJSESSIONID) {
-                const cookies = getCookies();
-                if (cookies.JSESSIONID) {
-                    currentJSESSIONID = cookies.JSESSIONID;
-                    // console.log('从cookie获取登录后JSESSIONID:', currentJSESSIONID);
-                }
-            }
+            localStorage.setItem('token', response.user.token);
             return response;
         }
     } catch (error) {
@@ -306,7 +248,11 @@ const renewSession = async () => {
             phoneModel: "1.1",
             appVersion: "V1.1"
         });
-        // console.log('会话续期响应:', response);
+        console.log('会话续期响应:', response);
+        if (response) {
+            //token
+            localStorage.setItem('token', response.user.token);
+        }
     } catch (error) {
         console.error('会话续期失败:', error);
     }
