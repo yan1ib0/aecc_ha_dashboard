@@ -2004,7 +2004,7 @@ const toggleLoad = async (deviceSn) => {
     const newStatus = loadDevice.switchStatus === 1 ? 0 : 1;
 
     // 调用API设置状态
-    const response = await changeSocketSwitchStatus(newStatus, deviceSn);
+    const response = await changeSocketSwitchStatus(newStatus, deviceSn,loadDevice.type);
     
     // 检查返回结果
     if (response && response.result === 0) {
@@ -2016,10 +2016,11 @@ const toggleLoad = async (deviceSn) => {
       loadDevice.switchStatus = newStatus;
 
       // 更新UI
-      updateEntityGroupsFromDeviceInfo();
+      // updateEntityGroupsFromDeviceInfo();
       
       console.log(`[ha-vue-card] 切换Load设备 ${deviceSn} 状态为: ${newStatus}`);
     } else {
+      loadDevice.switchStatus = newStatus=== 1 ? 0 : 1;
       // 失败
       showMessage(response && response.msg ? response.msg : t('device.switch_failed'), 'error');
       console.error(`[ha-vue-card] 切换Load设备状态失败:`, response);
@@ -2045,7 +2046,7 @@ const toggleCharger = async (deviceSn) => {
     const newStatus = chargerDevice.switchStatus === 1 ? 0 : 1;
 
     // 调用API设置状态
-    const response = await changeChargerSwitchStatus(newStatus, deviceSn);
+    const response = await changeChargerSwitchStatus(newStatus, deviceSn,loadDevice.type);
     console.log(response)
     // 检查返回结果
     if (response && response.result === 0) {
@@ -2056,10 +2057,11 @@ const toggleCharger = async (deviceSn) => {
       chargerDevice.switchStatus = newStatus;
 
       // 更新UI
-      updateEntityGroupsFromDeviceInfo();
+      // updateEntityGroupsFromDeviceInfo();
       
       console.log(`[ha-vue-card] 切换Charger设备 ${deviceSn} 状态为: ${newStatus}`);
     } else {
+      chargerDevice.switchStatus = newStatus=== 1 ? 0 : 1;
       // 失败
       showMessage(response && response.msg ? response.msg : t('device.switch_failed'), 'error');
       console.error(`[ha-vue-card] 切换Charger设备状态失败:`, response);
@@ -2096,10 +2098,11 @@ const toggleHeatPump = async (deviceSn) => {
       heatPumpDevice.switchStatus = newStatus;
 
       // 更新UI
-      updateEntityGroupsFromDeviceInfo();
+      // updateEntityGroupsFromDeviceInfo();
       
       console.log(`[ha-vue-card] 切换热泵设备 ${deviceSn} 状态为: ${newStatus}`);
     } else {
+      heatPumpDevice.switchStatus = newStatus=== 1 ? 0 : 1;
       // 失败
       showMessage(response && response.msg ? response.msg : t('device.switch_failed'), 'error');
       console.error(`[ha-vue-card] 切换热泵设备状态失败:`, response);

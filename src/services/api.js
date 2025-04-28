@@ -160,7 +160,7 @@ api.interceptors.response.use(
             return Promise.reject(error);
         }
         // 正常响应，返回业务数据
-        if (data&&data.obj === null) {
+        if (data && data.obj === null) {
             return data;
         }
         return data.obj;
@@ -341,7 +341,7 @@ export const getPlantVos = async () => {
  * 充电桩开关  0关 1开
  * @param {Object} val
  */
-export const changeChargerSwitchStatus = async (val, deviceSn) => {
+export const changeChargerSwitchStatus = async (val, deviceSn, type) => {
     // console.log("val--->", val);
     let res = await api.post("device/setDeviceParam", null, {
         params: {
@@ -357,14 +357,25 @@ export const changeChargerSwitchStatus = async (val, deviceSn) => {
  * 插座开关  0关 1开
  * @param {Object} val
  */
-export const changeSocketSwitchStatus = async (val, deviceSn) => {
-    let res = await api.post('/device/setDeviceParam', null, {
-        params: {
+export const changeSocketSwitchStatus = async (val, deviceSn, type) => {
+    let res;
+    if (type && type == 5) {//aecc
+        res = await api.post('/device/setDeviceParam', null, {
+            params: {
+                deviceSn: deviceSn,
+                startAddr: "0x0000",
+                data: val
+            }
+        });
+    } else if (type && type == 50) {//第三方
+        res = await api.post("device/setCustomParams", {
             deviceSn: deviceSn,
-            startAddr: "0x0000",
-            data: val
-        }
-    });
+            deviceType: type,
+            object: {switch: val},
+        })
+
+    }
+
     console.log("插座开关响应", res);
     return res;
 }
@@ -374,13 +385,12 @@ export const changeSocketSwitchStatus = async (val, deviceSn) => {
  * @param {number} status - 状态(0: 关闭, 1: 开启)
  */
 export const switchPowerControl = async (val, deviceSn, type) => {
-    let res = await api.post("device/setCustomParams",  {
-        params: {
-            deviceSn: deviceSn,
-            deviceType: type,
-            object: {switch: val},
-        }
-    }, true, true)
+    // 第三方热泵
+    let res = await api.post("device/setCustomParams", {
+        deviceSn: deviceSn,
+        deviceType: type,
+        object: {switch: val},
+    })
     console.log("热泵开关响应", res);
     return res;
 }
