@@ -111,10 +111,10 @@
                                      group.name === t('device.charger') ? toggleCharger(entity.value) : 
                                      toggleHeatPump(entity.value)">
                       <span class="slider round"></span>
-                      <span class="switch-label">{{
-                          entity.switchStatus === 1 ? t('entity_groups.switch.on') :
-                              t('entity_groups.switch.off')
-                        }}</span>
+<!--                      <span class="switch-label">{{-->
+<!--                          entity.switchStatus === 1 ? t('entity_groups.switch.on') :-->
+<!--                              t('entity_groups.switch.off')-->
+<!--                        }}</span>-->
                     </label>
                   </div>
                 </div>
@@ -478,11 +478,11 @@ const onPlantChange = async () => {
 };
 
 onBeforeUpdate(() => {
-  console.log('[ha-vue-card] 组件即将更新');
+  // console.log('[ha-vue-card] 组件即将更新');
 });
 
 onUpdated(() => {
-  console.log('[ha-vue-card] 组件已更新');
+  // console.log('[ha-vue-card] 组件已更新');
 });
 
 onBeforeUnmount(() => {
@@ -1425,11 +1425,11 @@ const updateEntityGroups = async () => {
       deviceDetailInfo.value.loads = [];
       for (const load of deviceInfo.value.loadList) {
         try {
-          if (load.deviceSn && load.iconType) {
-            const loadInfo = await getDeviceBySn(load.iconType, load.deviceSn);
+          if (load.deviceSn && load.type) {
+            const loadInfo = await getDeviceBySn(load.type, load.deviceSn);
             deviceDetailInfo.value.loads.push({
               deviceSn: load.deviceSn,
-              iconType: load.iconType,
+              type: load.type,
               details: loadInfo
             });
             console.log("[ha-vue-card] 获取Load设备详细信息:", loadInfo);
@@ -1446,11 +1446,11 @@ const updateEntityGroups = async () => {
       deviceDetailInfo.value.chargers = [];
       for (const charger of deviceInfo.value.chargerList) {
         try {
-          if (charger.deviceSn && charger.iconType) {
-            const chargerInfo = await getDeviceBySn(charger.iconType, charger.deviceSn);
+          if (charger.deviceSn && charger.type) {
+            const chargerInfo = await getDeviceBySn(charger.type, charger.deviceSn);
             deviceDetailInfo.value.chargers.push({
               deviceSn: charger.deviceSn,
-              iconType: charger.iconType,
+              type: charger.type,
               details: chargerInfo
             });
             console.log("[ha-vue-card] 获取Charger设备详细信息:", chargerInfo);
@@ -1467,11 +1467,11 @@ const updateEntityGroups = async () => {
       deviceDetailInfo.value.heatPumps = [];
       for (const heatPump of deviceInfo.value.heatPumpList) {
         try {
-          if (heatPump.deviceSn && heatPump.iconType) {
-            const heatPumpInfo = await getDeviceBySn(heatPump.iconType, heatPump.deviceSn);
+          if (heatPump.deviceSn && heatPump.type) {
+            const heatPumpInfo = await getDeviceBySn(heatPump.type, heatPump.deviceSn);
             deviceDetailInfo.value.heatPumps.push({
               deviceSn: heatPump.deviceSn,
-              iconType: heatPump.iconType,
+              type: heatPump.type,
               details: heatPumpInfo
             });
             console.log("[ha-vue-card] 获取热泵设备详细信息:", heatPumpInfo);
@@ -1673,6 +1673,7 @@ const generateLoadSubGroups = () => {
   const subGroups = [];
 
   if (deviceDetailInfo.value.loads && deviceDetailInfo.value.loads.length > 0) {
+    console.log("deviceDetailInfo信息",deviceDetailInfo.value);
     for (const load of deviceDetailInfo.value.loads) {
       if (load.details && load.details.deviceInfoMap) {
         const deviceInfoMap = load.details.deviceInfoMap;

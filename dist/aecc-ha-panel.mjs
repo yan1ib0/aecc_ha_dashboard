@@ -94619,7 +94619,6 @@ api.interceptors.request.use(
     }
     config.headers["Accept-Language"] = getHaLanguage();
     config.headers["token"] = localStorage.getItem("token");
-    console.log("发送请求:", config.url, "请求头:", JSON.stringify(config.headers));
     return config;
   },
   (error) => {
@@ -94628,7 +94627,6 @@ api.interceptors.request.use(
 );
 api.interceptors.response.use(
   (response) => {
-    console.log("接收到响应:", response.config.url, "响应头:", JSON.stringify(response.headers));
     const { data } = response;
     if (data === void 0) {
       return Promise.reject(new Error("响应数据格式错误"));
@@ -94782,7 +94780,7 @@ const changeSocketSwitchStatus = async (val, deviceSn) => {
   return res;
 };
 const switchPowerControl = async (val, deviceSn, type) => {
-  let res = await api.post("device/setCustomParams", null, {
+  let res = await api.post("device/setCustomParams", {
     params: {
       deviceSn,
       deviceType: type,
@@ -98736,7 +98734,7 @@ const zhCN = {
   "logs.all_data_initialized": "所有数据初始化完成",
 };
 
-const _style_0 = ".panel[data-v-0dc47613]{padding:16px;font-family:var(--primary-font-family, Roboto, sans-serif);color:var(--primary-text-color, #333);background-color:var(--card-background-color, #fff);border-radius:8px;box-shadow:0 2px 4px #0000001a;position:relative}.message-toast[data-v-0dc47613]{position:fixed;top:20px;left:50%;transform:translate(-50%);padding:10px 20px;border-radius:4px;display:flex;align-items:center;box-shadow:0 3px 6px #00000029;z-index:9999;animation:slide-down-0dc47613 .3s ease-out;min-width:250px;max-width:80%}.message-toast .mdi[data-v-0dc47613]{margin-right:10px;font-size:20px}.message-toast.success[data-v-0dc47613]{background-color:#4caf50e6;color:#fff}.message-toast.error[data-v-0dc47613]{background-color:#f44336e6;color:#fff}@keyframes slide-down-0dc47613{0%{transform:translate(-50%) translateY(-20px);opacity:0}to{transform:translate(-50%) translateY(0);opacity:1}}.header-container[data-v-0dc47613]{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px}.config-button[data-v-0dc47613]{background-color:var(--primary-color, #4CAF50);color:#fff;border:none;border-radius:50%;width:40px;height:40px;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:background-color .3s}.config-button[data-v-0dc47613]:hover{background-color:var(--light-primary-color, #66BB6A)}.config-button .mdi[data-v-0dc47613]{font-size:20px}.config-dialog-overlay[data-v-0dc47613]{position:fixed;inset:0;background-color:#00000080;display:flex;align-items:center;justify-content:center;z-index:1000}.config-dialog[data-v-0dc47613]{background-color:var(--card-background-color, #fff);border-radius:8px;width:90%;max-width:500px;max-height:90vh;overflow-y:auto;box-shadow:0 4px 8px #0003}.config-dialog-header[data-v-0dc47613]{display:flex;justify-content:space-between;align-items:center;padding:16px;border-bottom:1px solid var(--divider-color, #e0e0e0)}.config-dialog-header h3[data-v-0dc47613]{margin:0;font-size:18px;font-weight:500}.close-button[data-v-0dc47613]{background:none;border:none;cursor:pointer;color:var(--secondary-text-color, #757575);font-size:20px;display:flex;align-items:center;justify-content:center}.close-button[data-v-0dc47613]:hover{color:var(--primary-text-color, #333)}.config-dialog-content[data-v-0dc47613]{padding:16px}.config-submit-button[data-v-0dc47613]{width:100%;padding:10px;margin-top:16px;background-color:var(--primary-color, #4CAF50);color:#fff;border:none;border-radius:4px;font-size:14px;font-weight:500;cursor:pointer;transition:background-color .3s}.config-submit-button[data-v-0dc47613]:hover{background-color:var(--light-primary-color, #66BB6A)}.config-submit-button[data-v-0dc47613]:disabled{background-color:var(--disabled-color, #cccccc);cursor:not-allowed}.auth-prompt[data-v-0dc47613]{display:flex;justify-content:center;align-items:center;height:200px;background-color:var(--card-background-color, #fff);border-radius:8px;box-shadow:0 2px 4px #0000001a}.auth-prompt-content[data-v-0dc47613]{text-align:center;color:var(--secondary-text-color, #757575)}.auth-prompt-content .mdi[data-v-0dc47613]{font-size:48px;margin-bottom:16px;display:block}.form-group input[type=text][data-v-0dc47613],.form-group input[type=password][data-v-0dc47613]{width:100%;padding:10px;border:1px solid var(--divider-color, #e0e0e0);border-radius:4px;font-size:14px}.form-group input[type=text][data-v-0dc47613]:focus,.form-group input[type=password][data-v-0dc47613]:focus{border-color:var(--primary-color, #4CAF50);outline:none}.checkbox-container[data-v-0dc47613]{display:flex;align-items:center;cursor:pointer;font-size:14px}.error-message[data-v-0dc47613]{margin-top:16px;padding:10px;background-color:#eb57571a;color:#eb5757;border-radius:4px;font-size:14px}.plant-selector-card[data-v-0dc47613]{background:var(--card-background-color);border-radius:8px;padding:16px;display:flex;align-items:center;box-shadow:0 2px 4px #0000001a;height:auto;min-height:60px;z-index:10;position:relative}.plant-selector-card label[data-v-0dc47613]{margin-right:12px;font-weight:500}.plant-selector-card select[data-v-0dc47613]{flex:1;padding:8px 12px;border-radius:4px;border:1px solid var(--divider-color);background-color:var(--card-background-color);color:var(--primary-text-color);font-size:14px}.content[data-v-0dc47613]{margin-top:24px}h1[data-v-0dc47613]{margin:0;font-size:24px;font-weight:400;border-bottom:1px solid var(--divider-color);padding-bottom:16px}.chart-container[data-v-0dc47613]{margin:20px 0;width:100%;position:relative}.energy-flow-container[data-v-0dc47613]{height:0;min-height:250px;padding-bottom:90%!important;position:relative;width:100%;box-sizing:border-box;overflow:hidden}.energy-flow-container .chart[data-v-0dc47613]{position:absolute;top:0;left:0;width:100%;height:100%;box-sizing:border-box}.chart-container[data-v-0dc47613]:nth-child(2){padding-bottom:80%!important;background:var(--card-background-color);border-radius:8px;padding:16px;box-shadow:0 2px 4px #0000001a;margin-bottom:16px}.chart[data-v-0dc47613]{width:100%;background:var(--card-background-color);border-radius:8px;padding:16px;box-sizing:border-box}.entities-container[data-v-0dc47613]{margin-top:20px;width:100%}.section-title[data-v-0dc47613]{text-align:center;font-size:18px;margin-bottom:16px;color:var(--primary-text-color)}.sub-section-title[data-v-0dc47613]{text-align:center;font-size:16px;margin:12px 0;color:var(--secondary-text-color)}.entity-group[data-v-0dc47613]{margin-bottom:16px;border:1px solid var(--divider-color);border-radius:8px;overflow:hidden}.group-header[data-v-0dc47613]{padding:12px 16px;background:var(--secondary-background-color);cursor:pointer;display:flex;justify-content:space-between;align-items:center;border-bottom:2px solid var(--primary-color);transition:background-color .3s ease}.group-header[data-v-0dc47613]:hover{background-color:#ff98001a}.arrow[data-v-0dc47613]{transition:transform .3s ease}.arrow.expanded[data-v-0dc47613]{transform:rotate(180deg)}.group-content[data-v-0dc47613]{padding:8px}.entity-subgroup[data-v-0dc47613]{margin:8px;border:1px solid var(--divider-color);border-radius:4px;overflow:hidden}.subgroup-header[data-v-0dc47613]{padding:8px 12px;background:var(--secondary-background-color);cursor:pointer;display:flex;justify-content:space-between;align-items:center;font-size:.9em}.subgroup-content[data-v-0dc47613]{padding:4px;background:var(--card-background-color)}.entity-card[data-v-0dc47613]{display:flex;justify-content:space-between;align-items:center;padding:12px;background:var(--card-background-color);margin:8px;border-radius:4px;box-shadow:0 2px 4px #0000001a;border-left:3px solid var(--primary-color);transition:all .3s ease}.entity-card[data-v-0dc47613]:hover{transform:translate(2px);box-shadow:0 4px 8px #ff980033}.entity-info[data-v-0dc47613]{display:flex;align-items:center;gap:8px}.entity-description[data-v-0dc47613]{font-size:14px;color:var(--primary-text-color)}.entity-value[data-v-0dc47613]{font-size:14px;font-weight:500;color:var(--primary-color);padding:4px 8px;background-color:#ff98001a;border-radius:4px}.mdi[data-v-0dc47613]{font-size:20px;color:var(--primary-color);transition:transform .3s ease}.mdi[data-v-0dc47613]:hover{transform:scale(1.1)}@media (max-width: 600px){.panel[data-v-0dc47613]{padding:16px}.plant-selector-card[data-v-0dc47613]{padding:12px;min-height:70px}.energy-flow-container[data-v-0dc47613]{min-height:200px;padding-bottom:90%!important}.chart-container[data-v-0dc47613]:nth-child(2){padding-bottom:120%!important;width:100%;box-sizing:border-box;overflow:hidden}.chart[data-v-0dc47613]{padding:8px;width:100%;box-sizing:border-box}.entity-card[data-v-0dc47613]{flex-direction:row;justify-content:space-between;align-items:center;gap:16px}.entity-description[data-v-0dc47613]{flex:7}.entity-value[data-v-0dc47613]{flex:3;text-align:right}}.energy-summary-container[data-v-0dc47613]{margin-top:30px;width:100%}.energy-summary-grid[data-v-0dc47613]{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:16px}.energy-summary-card[data-v-0dc47613]{display:flex;align-items:center;padding:16px;border-radius:8px;box-shadow:0 2px 4px #0000001a;transition:transform .3s ease,box-shadow .3s ease}.energy-summary-card[data-v-0dc47613]:hover{transform:translateY(-5px);box-shadow:0 4px 8px #0003}.energy-summary-icon[data-v-0dc47613]{display:flex;align-items:center;justify-content:center;width:50px;height:50px;border-radius:50%;margin-right:16px}.energy-summary-icon .mdi[data-v-0dc47613]{font-size:24px;color:#fff}.energy-summary-content[data-v-0dc47613]{flex:1}.energy-summary-title[data-v-0dc47613]{font-size:14px;color:var(--secondary-text-color);margin-bottom:4px}.energy-summary-value[data-v-0dc47613]{font-size:24px;font-weight:600;color:var(--primary-text-color)}.energy-summary-card.solar .energy-summary-icon[data-v-0dc47613]{background-color:#ff9800}.energy-summary-card.grid .energy-summary-icon[data-v-0dc47613]{background-color:#673ab7}.energy-summary-card.load .energy-summary-icon[data-v-0dc47613]{background-color:#f44336}.energy-summary-card.battery .energy-summary-icon[data-v-0dc47613]{background-color:#00bcd4}.energy-summary-card.grid-buy .energy-summary-icon[data-v-0dc47613]{background-color:#9c27b0}.energy-summary-card.battery-discharge .energy-summary-icon[data-v-0dc47613]{background-color:#009688}@media (max-width: 600px){.energy-summary-grid[data-v-0dc47613]{grid-template-columns:repeat(2,1fr);gap:8px}.energy-summary-card[data-v-0dc47613]{padding:10px}.energy-summary-icon[data-v-0dc47613]{width:40px;height:40px;margin-right:10px}.energy-summary-icon .mdi[data-v-0dc47613]{font-size:20px}.energy-summary-title[data-v-0dc47613]{font-size:12px}.energy-summary-value[data-v-0dc47613]{font-size:18px}}.ai-plan-card[data-v-0dc47613]{background:var(--card-background-color);border-radius:8px;padding:16px;display:flex;align-items:center;box-shadow:0 2px 4px #0000001a;height:auto;min-height:60px;z-index:10;position:relative}.ai-plan-card label[data-v-0dc47613]{margin-right:12px;font-weight:500}.ai-plan-value[data-v-0dc47613]{flex:1;padding:8px 12px;border-radius:4px;background-color:#ff98001a;color:var(--primary-color);font-weight:500;text-align:center}.device-switch-container[data-v-0dc47613]{display:flex;justify-content:flex-end;margin-top:8px}.switch[data-v-0dc47613]{position:relative;display:inline-block;width:50px;height:24px;margin-right:8px}.switch input[data-v-0dc47613]{opacity:0;width:0;height:0}.slider[data-v-0dc47613]{position:absolute;cursor:pointer;inset:0;background-color:#ccc;transition:.4s}.slider[data-v-0dc47613]:before{position:absolute;content:\"\";height:16px;width:16px;left:4px;bottom:4px;background-color:#fff;transition:.4s}input:checked+.slider[data-v-0dc47613]{background-color:var(--primary-color, #4CAF50)}input:focus+.slider[data-v-0dc47613]{box-shadow:0 0 1px var(--primary-color, #4CAF50)}input:checked+.slider[data-v-0dc47613]:before{transform:translate(26px)}.slider.round[data-v-0dc47613]{border-radius:24px}.slider.round[data-v-0dc47613]:before{border-radius:50%}.switch-label[data-v-0dc47613]{margin-left:60px;line-height:24px;font-size:12px;font-weight:500;color:var(--primary-text-color)}.sub-group-header[data-v-0dc47613]{display:flex;justify-content:space-between;align-items:center;padding:8px 16px;background-color:var(--card-background-color);border-radius:4px;margin-bottom:8px}.sub-group-name[data-v-0dc47613]{font-weight:500;color:var(--primary-text-color)}.entity-value-container[data-v-0dc47613]{display:flex;flex-direction:column;align-items:flex-end}.device-switch-button[data-v-0dc47613],.device-switch-button.on[data-v-0dc47613],.device-switch-button.off[data-v-0dc47613],.device-switch-button[data-v-0dc47613]:hover{display:none}@media (max-width: 600px){.switch[data-v-0dc47613]{width:40px;height:20px}.slider[data-v-0dc47613]:before{height:14px;width:14px;left:3px;bottom:3px}input:checked+.slider[data-v-0dc47613]:before{transform:translate(20px)}.switch-label[data-v-0dc47613]{margin-left:45px;font-size:10px}}.configuration-help[data-v-0dc47613]{background:var(--card-background-color);border-radius:8px;padding:20px;margin:16px 0;box-shadow:0 2px 4px #0000001a;color:var(--primary-text-color)}.configuration-help h2[data-v-0dc47613]{color:var(--error-color, #eb5757);margin-top:0}.configuration-help ol[data-v-0dc47613]{padding-left:20px}.configuration-help pre[data-v-0dc47613]{background:#0000000d;padding:12px;border-radius:4px;overflow-x:auto;font-family:monospace;margin:8px 0}.credentials-form[data-v-0dc47613]{max-width:400px;margin:40px auto;padding:24px;background:var(--card-background-color);border-radius:8px;box-shadow:0 2px 8px #00000026;color:var(--primary-text-color)}.credentials-form h2[data-v-0dc47613]{margin-top:0;text-align:center;color:var(--primary-color);margin-bottom:16px}.credentials-form p[data-v-0dc47613]{text-align:center;margin-bottom:24px;color:var(--secondary-text-color)}.form-group[data-v-0dc47613]{margin-bottom:16px}.form-group label[data-v-0dc47613]{display:block;margin-bottom:8px;font-weight:500}.form-group input[type=text][data-v-0dc47613],.form-group input[type=password][data-v-0dc47613]{width:100%;padding:10px;border-radius:4px;border:1px solid var(--divider-color);background-color:var(--card-background-color);color:var(--primary-text-color);font-size:14px;box-sizing:border-box}.checkbox-container[data-v-0dc47613]{display:flex;align-items:center;cursor:pointer;user-select:none;font-size:14px}.checkbox-container input[data-v-0dc47613]{margin-right:8px}.login-button[data-v-0dc47613]{width:100%;padding:10px;margin-top:16px;background-color:var(--primary-color);color:#fff;border:none;border-radius:4px;font-size:14px;font-weight:500;cursor:pointer;transition:background-color .3s}.login-button[data-v-0dc47613]:hover{background-color:var(--light-primary-color)}.login-button[data-v-0dc47613]:disabled{background-color:var(--disabled-color, #cccccc);cursor:not-allowed}.error-message[data-v-0dc47613]{margin-top:16px;padding:10px;background-color:#eb57571a;color:var(--error-color, #eb5757);border-radius:4px;text-align:center;font-size:14px}.chart-title[data-v-0dc47613]{text-align:center;font-size:16px;margin:0 0 12px;color:var(--primary-text-color);font-weight:500}";
+const _style_0 = ".panel[data-v-e1b61c9c]{padding:16px;font-family:var(--primary-font-family, Roboto, sans-serif);color:var(--primary-text-color, #333);background-color:var(--card-background-color, #fff);border-radius:8px;box-shadow:0 2px 4px #0000001a;position:relative}.message-toast[data-v-e1b61c9c]{position:fixed;top:20px;left:50%;transform:translate(-50%);padding:10px 20px;border-radius:4px;display:flex;align-items:center;box-shadow:0 3px 6px #00000029;z-index:9999;animation:slide-down-e1b61c9c .3s ease-out;min-width:250px;max-width:80%}.message-toast .mdi[data-v-e1b61c9c]{margin-right:10px;font-size:20px}.message-toast.success[data-v-e1b61c9c]{background-color:#4caf50e6;color:#fff}.message-toast.error[data-v-e1b61c9c]{background-color:#f44336e6;color:#fff}@keyframes slide-down-e1b61c9c{0%{transform:translate(-50%) translateY(-20px);opacity:0}to{transform:translate(-50%) translateY(0);opacity:1}}.header-container[data-v-e1b61c9c]{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px}.config-button[data-v-e1b61c9c]{background-color:var(--primary-color, #4CAF50);color:#fff;border:none;border-radius:50%;width:40px;height:40px;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:background-color .3s}.config-button[data-v-e1b61c9c]:hover{background-color:var(--light-primary-color, #66BB6A)}.config-button .mdi[data-v-e1b61c9c]{font-size:20px}.config-dialog-overlay[data-v-e1b61c9c]{position:fixed;inset:0;background-color:#00000080;display:flex;align-items:center;justify-content:center;z-index:1000}.config-dialog[data-v-e1b61c9c]{background-color:var(--card-background-color, #fff);border-radius:8px;width:90%;max-width:500px;max-height:90vh;overflow-y:auto;box-shadow:0 4px 8px #0003}.config-dialog-header[data-v-e1b61c9c]{display:flex;justify-content:space-between;align-items:center;padding:16px;border-bottom:1px solid var(--divider-color, #e0e0e0)}.config-dialog-header h3[data-v-e1b61c9c]{margin:0;font-size:18px;font-weight:500}.close-button[data-v-e1b61c9c]{background:none;border:none;cursor:pointer;color:var(--secondary-text-color, #757575);font-size:20px;display:flex;align-items:center;justify-content:center}.close-button[data-v-e1b61c9c]:hover{color:var(--primary-text-color, #333)}.config-dialog-content[data-v-e1b61c9c]{padding:16px}.config-submit-button[data-v-e1b61c9c]{width:100%;padding:10px;margin-top:16px;background-color:var(--primary-color, #4CAF50);color:#fff;border:none;border-radius:4px;font-size:14px;font-weight:500;cursor:pointer;transition:background-color .3s}.config-submit-button[data-v-e1b61c9c]:hover{background-color:var(--light-primary-color, #66BB6A)}.config-submit-button[data-v-e1b61c9c]:disabled{background-color:var(--disabled-color, #cccccc);cursor:not-allowed}.auth-prompt[data-v-e1b61c9c]{display:flex;justify-content:center;align-items:center;height:200px;background-color:var(--card-background-color, #fff);border-radius:8px;box-shadow:0 2px 4px #0000001a}.auth-prompt-content[data-v-e1b61c9c]{text-align:center;color:var(--secondary-text-color, #757575)}.auth-prompt-content .mdi[data-v-e1b61c9c]{font-size:48px;margin-bottom:16px;display:block}.form-group input[type=text][data-v-e1b61c9c],.form-group input[type=password][data-v-e1b61c9c]{width:100%;padding:10px;border:1px solid var(--divider-color, #e0e0e0);border-radius:4px;font-size:14px}.form-group input[type=text][data-v-e1b61c9c]:focus,.form-group input[type=password][data-v-e1b61c9c]:focus{border-color:var(--primary-color, #4CAF50);outline:none}.checkbox-container[data-v-e1b61c9c]{display:flex;align-items:center;cursor:pointer;font-size:14px}.error-message[data-v-e1b61c9c]{margin-top:16px;padding:10px;background-color:#eb57571a;color:#eb5757;border-radius:4px;font-size:14px}.plant-selector-card[data-v-e1b61c9c]{background:var(--card-background-color);border-radius:8px;padding:16px;display:flex;align-items:center;box-shadow:0 2px 4px #0000001a;height:auto;min-height:60px;z-index:10;position:relative}.plant-selector-card label[data-v-e1b61c9c]{margin-right:12px;font-weight:500}.plant-selector-card select[data-v-e1b61c9c]{flex:1;padding:8px 12px;border-radius:4px;border:1px solid var(--divider-color);background-color:var(--card-background-color);color:var(--primary-text-color);font-size:14px}.content[data-v-e1b61c9c]{margin-top:24px}h1[data-v-e1b61c9c]{margin:0;font-size:24px;font-weight:400;border-bottom:1px solid var(--divider-color);padding-bottom:16px}.chart-container[data-v-e1b61c9c]{margin:20px 0;width:100%;position:relative}.energy-flow-container[data-v-e1b61c9c]{height:0;min-height:250px;padding-bottom:90%!important;position:relative;width:100%;box-sizing:border-box;overflow:hidden}.energy-flow-container .chart[data-v-e1b61c9c]{position:absolute;top:0;left:0;width:100%;height:100%;box-sizing:border-box}.chart-container[data-v-e1b61c9c]:nth-child(2){padding-bottom:80%!important;background:var(--card-background-color);border-radius:8px;padding:16px;box-shadow:0 2px 4px #0000001a;margin-bottom:16px}.chart[data-v-e1b61c9c]{width:100%;background:var(--card-background-color);border-radius:8px;padding:16px;box-sizing:border-box}.entities-container[data-v-e1b61c9c]{margin-top:20px;width:100%}.section-title[data-v-e1b61c9c]{text-align:center;font-size:18px;margin-bottom:16px;color:var(--primary-text-color)}.sub-section-title[data-v-e1b61c9c]{text-align:center;font-size:16px;margin:12px 0;color:var(--secondary-text-color)}.entity-group[data-v-e1b61c9c]{margin-bottom:16px;border:1px solid var(--divider-color);border-radius:8px;overflow:hidden}.group-header[data-v-e1b61c9c]{padding:12px 16px;background:var(--secondary-background-color);cursor:pointer;display:flex;justify-content:space-between;align-items:center;border-bottom:2px solid var(--primary-color);transition:background-color .3s ease}.group-header[data-v-e1b61c9c]:hover{background-color:#ff98001a}.arrow[data-v-e1b61c9c]{transition:transform .3s ease}.arrow.expanded[data-v-e1b61c9c]{transform:rotate(180deg)}.group-content[data-v-e1b61c9c]{padding:8px}.entity-subgroup[data-v-e1b61c9c]{margin:8px;border:1px solid var(--divider-color);border-radius:4px;overflow:hidden}.subgroup-header[data-v-e1b61c9c]{padding:8px 12px;background:var(--secondary-background-color);cursor:pointer;display:flex;justify-content:space-between;align-items:center;font-size:.9em}.subgroup-content[data-v-e1b61c9c]{padding:4px;background:var(--card-background-color)}.entity-card[data-v-e1b61c9c]{display:flex;justify-content:space-between;align-items:center;padding:12px;background:var(--card-background-color);margin:8px;border-radius:4px;box-shadow:0 2px 4px #0000001a;border-left:3px solid var(--primary-color);transition:all .3s ease}.entity-card[data-v-e1b61c9c]:hover{transform:translate(2px);box-shadow:0 4px 8px #ff980033}.entity-info[data-v-e1b61c9c]{display:flex;align-items:center;gap:8px}.entity-description[data-v-e1b61c9c]{font-size:14px;color:var(--primary-text-color)}.entity-value[data-v-e1b61c9c]{font-size:14px;font-weight:500;color:var(--primary-color);padding:4px 8px;background-color:#ff98001a;border-radius:4px}.mdi[data-v-e1b61c9c]{font-size:20px;color:var(--primary-color);transition:transform .3s ease}.mdi[data-v-e1b61c9c]:hover{transform:scale(1.1)}@media (max-width: 600px){.panel[data-v-e1b61c9c]{padding:16px}.plant-selector-card[data-v-e1b61c9c]{padding:12px;min-height:70px}.energy-flow-container[data-v-e1b61c9c]{min-height:200px;padding-bottom:90%!important}.chart-container[data-v-e1b61c9c]:nth-child(2){padding-bottom:120%!important;width:100%;box-sizing:border-box;overflow:hidden}.chart[data-v-e1b61c9c]{padding:8px;width:100%;box-sizing:border-box}.entity-card[data-v-e1b61c9c]{flex-direction:row;justify-content:space-between;align-items:center;gap:16px}.entity-description[data-v-e1b61c9c]{flex:7}.entity-value[data-v-e1b61c9c]{flex:3;text-align:right}}.energy-summary-container[data-v-e1b61c9c]{margin-top:30px;width:100%}.energy-summary-grid[data-v-e1b61c9c]{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:16px}.energy-summary-card[data-v-e1b61c9c]{display:flex;align-items:center;padding:16px;border-radius:8px;box-shadow:0 2px 4px #0000001a;transition:transform .3s ease,box-shadow .3s ease}.energy-summary-card[data-v-e1b61c9c]:hover{transform:translateY(-5px);box-shadow:0 4px 8px #0003}.energy-summary-icon[data-v-e1b61c9c]{display:flex;align-items:center;justify-content:center;width:50px;height:50px;border-radius:50%;margin-right:16px}.energy-summary-icon .mdi[data-v-e1b61c9c]{font-size:24px;color:#fff}.energy-summary-content[data-v-e1b61c9c]{flex:1}.energy-summary-title[data-v-e1b61c9c]{font-size:14px;color:var(--secondary-text-color);margin-bottom:4px}.energy-summary-value[data-v-e1b61c9c]{font-size:24px;font-weight:600;color:var(--primary-text-color)}.energy-summary-card.solar .energy-summary-icon[data-v-e1b61c9c]{background-color:#ff9800}.energy-summary-card.grid .energy-summary-icon[data-v-e1b61c9c]{background-color:#673ab7}.energy-summary-card.load .energy-summary-icon[data-v-e1b61c9c]{background-color:#f44336}.energy-summary-card.battery .energy-summary-icon[data-v-e1b61c9c]{background-color:#00bcd4}.energy-summary-card.grid-buy .energy-summary-icon[data-v-e1b61c9c]{background-color:#9c27b0}.energy-summary-card.battery-discharge .energy-summary-icon[data-v-e1b61c9c]{background-color:#009688}@media (max-width: 600px){.energy-summary-grid[data-v-e1b61c9c]{grid-template-columns:repeat(2,1fr);gap:8px}.energy-summary-card[data-v-e1b61c9c]{padding:10px}.energy-summary-icon[data-v-e1b61c9c]{width:40px;height:40px;margin-right:10px}.energy-summary-icon .mdi[data-v-e1b61c9c]{font-size:20px}.energy-summary-title[data-v-e1b61c9c]{font-size:12px}.energy-summary-value[data-v-e1b61c9c]{font-size:18px}}.ai-plan-card[data-v-e1b61c9c]{background:var(--card-background-color);border-radius:8px;padding:16px;display:flex;align-items:center;box-shadow:0 2px 4px #0000001a;height:auto;min-height:60px;z-index:10;position:relative}.ai-plan-card label[data-v-e1b61c9c]{margin-right:12px;font-weight:500}.ai-plan-value[data-v-e1b61c9c]{flex:1;padding:8px 12px;border-radius:4px;background-color:#ff98001a;color:var(--primary-color);font-weight:500;text-align:center}.device-switch-container[data-v-e1b61c9c]{display:flex;justify-content:flex-end;margin-top:8px}.switch[data-v-e1b61c9c]{position:relative;display:inline-block;width:50px;height:24px;margin-right:8px}.switch input[data-v-e1b61c9c]{opacity:0;width:0;height:0}.slider[data-v-e1b61c9c]{position:absolute;cursor:pointer;inset:0;background-color:#ccc;transition:.4s}.slider[data-v-e1b61c9c]:before{position:absolute;content:\"\";height:16px;width:16px;left:4px;bottom:4px;background-color:#fff;transition:.4s}input:checked+.slider[data-v-e1b61c9c]{background-color:var(--primary-color, #4CAF50)}input:focus+.slider[data-v-e1b61c9c]{box-shadow:0 0 1px var(--primary-color, #4CAF50)}input:checked+.slider[data-v-e1b61c9c]:before{transform:translate(26px)}.slider.round[data-v-e1b61c9c]{border-radius:24px}.slider.round[data-v-e1b61c9c]:before{border-radius:50%}.switch-label[data-v-e1b61c9c]{margin-left:60px;line-height:24px;font-size:12px;font-weight:500;color:var(--primary-text-color)}.sub-group-header[data-v-e1b61c9c]{display:flex;justify-content:space-between;align-items:center;padding:8px 16px;background-color:var(--card-background-color);border-radius:4px;margin-bottom:8px}.sub-group-name[data-v-e1b61c9c]{font-weight:500;color:var(--primary-text-color)}.entity-value-container[data-v-e1b61c9c]{display:flex;flex-direction:column;align-items:flex-end}.device-switch-button[data-v-e1b61c9c],.device-switch-button.on[data-v-e1b61c9c],.device-switch-button.off[data-v-e1b61c9c],.device-switch-button[data-v-e1b61c9c]:hover{display:none}@media (max-width: 600px){.switch[data-v-e1b61c9c]{width:40px;height:20px}.slider[data-v-e1b61c9c]:before{height:14px;width:14px;left:3px;bottom:3px}input:checked+.slider[data-v-e1b61c9c]:before{transform:translate(20px)}.switch-label[data-v-e1b61c9c]{margin-left:45px;font-size:10px}}.configuration-help[data-v-e1b61c9c]{background:var(--card-background-color);border-radius:8px;padding:20px;margin:16px 0;box-shadow:0 2px 4px #0000001a;color:var(--primary-text-color)}.configuration-help h2[data-v-e1b61c9c]{color:var(--error-color, #eb5757);margin-top:0}.configuration-help ol[data-v-e1b61c9c]{padding-left:20px}.configuration-help pre[data-v-e1b61c9c]{background:#0000000d;padding:12px;border-radius:4px;overflow-x:auto;font-family:monospace;margin:8px 0}.credentials-form[data-v-e1b61c9c]{max-width:400px;margin:40px auto;padding:24px;background:var(--card-background-color);border-radius:8px;box-shadow:0 2px 8px #00000026;color:var(--primary-text-color)}.credentials-form h2[data-v-e1b61c9c]{margin-top:0;text-align:center;color:var(--primary-color);margin-bottom:16px}.credentials-form p[data-v-e1b61c9c]{text-align:center;margin-bottom:24px;color:var(--secondary-text-color)}.form-group[data-v-e1b61c9c]{margin-bottom:16px}.form-group label[data-v-e1b61c9c]{display:block;margin-bottom:8px;font-weight:500}.form-group input[type=text][data-v-e1b61c9c],.form-group input[type=password][data-v-e1b61c9c]{width:100%;padding:10px;border-radius:4px;border:1px solid var(--divider-color);background-color:var(--card-background-color);color:var(--primary-text-color);font-size:14px;box-sizing:border-box}.checkbox-container[data-v-e1b61c9c]{display:flex;align-items:center;cursor:pointer;user-select:none;font-size:14px}.checkbox-container input[data-v-e1b61c9c]{margin-right:8px}.login-button[data-v-e1b61c9c]{width:100%;padding:10px;margin-top:16px;background-color:var(--primary-color);color:#fff;border:none;border-radius:4px;font-size:14px;font-weight:500;cursor:pointer;transition:background-color .3s}.login-button[data-v-e1b61c9c]:hover{background-color:var(--light-primary-color)}.login-button[data-v-e1b61c9c]:disabled{background-color:var(--disabled-color, #cccccc);cursor:not-allowed}.error-message[data-v-e1b61c9c]{margin-top:16px;padding:10px;background-color:#eb57571a;color:var(--error-color, #eb5757);border-radius:4px;text-align:center;font-size:14px}.chart-title[data-v-e1b61c9c]{text-align:center;font-size:16px;margin:0 0 12px;color:var(--primary-text-color);font-weight:500}";
 
 const _export_sfc = (sfc, props) => {
   const target = sfc.__vccOpts || sfc;
@@ -98802,43 +98800,42 @@ const _hoisted_33 = {
 };
 const _hoisted_34 = { class: "switch" };
 const _hoisted_35 = ["checked", "onChange"];
-const _hoisted_36 = { class: "switch-label" };
-const _hoisted_37 = { class: "sub-section-title" };
-const _hoisted_38 = ["onClick"];
-const _hoisted_39 = {
+const _hoisted_36 = { class: "sub-section-title" };
+const _hoisted_37 = ["onClick"];
+const _hoisted_38 = {
   key: 0,
   class: "subgroup-content"
 };
-const _hoisted_40 = { class: "entity-info" };
-const _hoisted_41 = { class: "entity-description" };
-const _hoisted_42 = { class: "entity-value" };
-const _hoisted_43 = { class: "energy-summary-container" };
-const _hoisted_44 = { class: "section-title" };
-const _hoisted_45 = { class: "energy-summary-grid" };
-const _hoisted_46 = { class: "energy-summary-card solar" };
-const _hoisted_47 = { class: "energy-summary-content" };
-const _hoisted_48 = { class: "energy-summary-title" };
-const _hoisted_49 = { class: "energy-summary-value" };
-const _hoisted_50 = { class: "energy-summary-card grid" };
-const _hoisted_51 = { class: "energy-summary-content" };
-const _hoisted_52 = { class: "energy-summary-title" };
-const _hoisted_53 = { class: "energy-summary-value" };
-const _hoisted_54 = { class: "energy-summary-card load" };
-const _hoisted_55 = { class: "energy-summary-content" };
-const _hoisted_56 = { class: "energy-summary-title" };
-const _hoisted_57 = { class: "energy-summary-value" };
-const _hoisted_58 = { class: "energy-summary-card battery" };
-const _hoisted_59 = { class: "energy-summary-content" };
-const _hoisted_60 = { class: "energy-summary-title" };
-const _hoisted_61 = { class: "energy-summary-value" };
-const _hoisted_62 = { class: "energy-summary-card grid-buy" };
-const _hoisted_63 = { class: "energy-summary-content" };
-const _hoisted_64 = { class: "energy-summary-title" };
-const _hoisted_65 = { class: "energy-summary-value" };
-const _hoisted_66 = { class: "energy-summary-card battery-discharge" };
-const _hoisted_67 = { class: "energy-summary-content" };
-const _hoisted_68 = { class: "energy-summary-title" };
-const _hoisted_69 = { class: "energy-summary-value" };
+const _hoisted_39 = { class: "entity-info" };
+const _hoisted_40 = { class: "entity-description" };
+const _hoisted_41 = { class: "entity-value" };
+const _hoisted_42 = { class: "energy-summary-container" };
+const _hoisted_43 = { class: "section-title" };
+const _hoisted_44 = { class: "energy-summary-grid" };
+const _hoisted_45 = { class: "energy-summary-card solar" };
+const _hoisted_46 = { class: "energy-summary-content" };
+const _hoisted_47 = { class: "energy-summary-title" };
+const _hoisted_48 = { class: "energy-summary-value" };
+const _hoisted_49 = { class: "energy-summary-card grid" };
+const _hoisted_50 = { class: "energy-summary-content" };
+const _hoisted_51 = { class: "energy-summary-title" };
+const _hoisted_52 = { class: "energy-summary-value" };
+const _hoisted_53 = { class: "energy-summary-card load" };
+const _hoisted_54 = { class: "energy-summary-content" };
+const _hoisted_55 = { class: "energy-summary-title" };
+const _hoisted_56 = { class: "energy-summary-value" };
+const _hoisted_57 = { class: "energy-summary-card battery" };
+const _hoisted_58 = { class: "energy-summary-content" };
+const _hoisted_59 = { class: "energy-summary-title" };
+const _hoisted_60 = { class: "energy-summary-value" };
+const _hoisted_61 = { class: "energy-summary-card grid-buy" };
+const _hoisted_62 = { class: "energy-summary-content" };
+const _hoisted_63 = { class: "energy-summary-title" };
+const _hoisted_64 = { class: "energy-summary-value" };
+const _hoisted_65 = { class: "energy-summary-card battery-discharge" };
+const _hoisted_66 = { class: "energy-summary-content" };
+const _hoisted_67 = { class: "energy-summary-title" };
+const _hoisted_68 = { class: "energy-summary-value" };
 
 // const messages = {'en': en, 'zh': zhCN}
 // const i18n = createI18n({
@@ -99091,11 +99088,11 @@ const onPlantChange = async () => {
 };
 
 onBeforeUpdate(() => {
-  console.log('[ha-vue-card] 组件即将更新');
+  // console.log('[ha-vue-card] 组件即将更新');
 });
 
 onUpdated(() => {
-  console.log('[ha-vue-card] 组件已更新');
+  // console.log('[ha-vue-card] 组件已更新');
 });
 
 onBeforeUnmount(() => {
@@ -100023,11 +100020,11 @@ const updateEntityGroups = async () => {
       deviceDetailInfo.value.loads = [];
       for (const load of deviceInfo.value.loadList) {
         try {
-          if (load.deviceSn && load.iconType) {
-            const loadInfo = await getDeviceBySn(load.iconType, load.deviceSn);
+          if (load.deviceSn && load.type) {
+            const loadInfo = await getDeviceBySn(load.type, load.deviceSn);
             deviceDetailInfo.value.loads.push({
               deviceSn: load.deviceSn,
-              iconType: load.iconType,
+              type: load.type,
               details: loadInfo
             });
             console.log("[ha-vue-card] 获取Load设备详细信息:", loadInfo);
@@ -100044,11 +100041,11 @@ const updateEntityGroups = async () => {
       deviceDetailInfo.value.chargers = [];
       for (const charger of deviceInfo.value.chargerList) {
         try {
-          if (charger.deviceSn && charger.iconType) {
-            const chargerInfo = await getDeviceBySn(charger.iconType, charger.deviceSn);
+          if (charger.deviceSn && charger.type) {
+            const chargerInfo = await getDeviceBySn(charger.type, charger.deviceSn);
             deviceDetailInfo.value.chargers.push({
               deviceSn: charger.deviceSn,
-              iconType: charger.iconType,
+              type: charger.type,
               details: chargerInfo
             });
             console.log("[ha-vue-card] 获取Charger设备详细信息:", chargerInfo);
@@ -100065,11 +100062,11 @@ const updateEntityGroups = async () => {
       deviceDetailInfo.value.heatPumps = [];
       for (const heatPump of deviceInfo.value.heatPumpList) {
         try {
-          if (heatPump.deviceSn && heatPump.iconType) {
-            const heatPumpInfo = await getDeviceBySn(heatPump.iconType, heatPump.deviceSn);
+          if (heatPump.deviceSn && heatPump.type) {
+            const heatPumpInfo = await getDeviceBySn(heatPump.type, heatPump.deviceSn);
             deviceDetailInfo.value.heatPumps.push({
               deviceSn: heatPump.deviceSn,
-              iconType: heatPump.iconType,
+              type: heatPump.type,
               details: heatPumpInfo
             });
             console.log("[ha-vue-card] 获取热泵设备详细信息:", heatPumpInfo);
@@ -100271,6 +100268,7 @@ const generateLoadSubGroups = () => {
   const subGroups = [];
 
   if (deviceDetailInfo.value.loads && deviceDetailInfo.value.loads.length > 0) {
+    console.log("deviceDetailInfo信息",deviceDetailInfo.value);
     for (const load of deviceDetailInfo.value.loads) {
       if (load.details && load.details.deviceInfoMap) {
         const deviceInfoMap = load.details.deviceInfoMap;
@@ -100878,16 +100876,14 @@ return (_ctx, _cache) => {
                                      group.name === unref(t)('device.charger') ? toggleCharger(entity.value) : 
                                      toggleHeatPump(entity.value))
                                       }, null, 40, _hoisted_35),
-                                      _cache[10] || (_cache[10] = createBaseVNode("span", { class: "slider round" }, null, -1)),
-                                      createBaseVNode("span", _hoisted_36, toDisplayString$1(entity.switchStatus === 1 ? unref(t)('entity_groups.switch.on') :
-                              unref(t)('entity_groups.switch.off')), 1)
+                                      _cache[10] || (_cache[10] = createBaseVNode("span", { class: "slider round" }, null, -1))
                                     ])
                                   ]))
                                 : createCommentVNode("", true)
                             ])
                           ]))
                         }), 128)),
-                        createBaseVNode("h3", _hoisted_37, toDisplayString$1(unref(t)('device.detail_section')), 1),
+                        createBaseVNode("h3", _hoisted_36, toDisplayString$1(unref(t)('device.detail_section')), 1),
                         (openBlock(true), createElementBlock(Fragment, null, renderList(group.subGroups, (subGroup, subIndex) => {
                           return (openBlock(), createElementBlock("div", {
                             key: subIndex,
@@ -100901,21 +100897,21 @@ return (_ctx, _cache) => {
                               createBaseVNode("span", {
                                 class: normalizeClass(["arrow", { 'expanded': subGroup.expanded }])
                               }, "▼", 2)
-                            ], 8, _hoisted_38),
+                            ], 8, _hoisted_37),
                             (subGroup.expanded)
-                              ? (openBlock(), createElementBlock("div", _hoisted_39, [
+                              ? (openBlock(), createElementBlock("div", _hoisted_38, [
                                   (openBlock(true), createElementBlock(Fragment, null, renderList(subGroup.entities, (entity) => {
                                     return (openBlock(), createElementBlock("div", {
                                       key: entity.id,
                                       class: "entity-card"
                                     }, [
-                                      createBaseVNode("div", _hoisted_40, [
+                                      createBaseVNode("div", _hoisted_39, [
                                         createBaseVNode("span", {
                                           class: normalizeClass(["mdi", getEntityIcon(entity.id)])
                                         }, null, 2),
-                                        createBaseVNode("div", _hoisted_41, toDisplayString$1(entity.description), 1)
+                                        createBaseVNode("div", _hoisted_40, toDisplayString$1(entity.description), 1)
                                       ]),
-                                      createBaseVNode("div", _hoisted_42, toDisplayString$1(entity.value) + toDisplayString$1(entity.unit), 1)
+                                      createBaseVNode("div", _hoisted_41, toDisplayString$1(entity.value) + toDisplayString$1(entity.unit), 1)
                                     ]))
                                   }), 128))
                                 ]))
@@ -100927,61 +100923,61 @@ return (_ctx, _cache) => {
                 ]))
               }), 128))
             ]),
-            createBaseVNode("div", _hoisted_43, [
-              createBaseVNode("h2", _hoisted_44, toDisplayString$1(unref(t)('energy.title')), 1),
-              createBaseVNode("div", _hoisted_45, [
-                createBaseVNode("div", _hoisted_46, [
+            createBaseVNode("div", _hoisted_42, [
+              createBaseVNode("h2", _hoisted_43, toDisplayString$1(unref(t)('energy.title')), 1),
+              createBaseVNode("div", _hoisted_44, [
+                createBaseVNode("div", _hoisted_45, [
                   _cache[12] || (_cache[12] = createBaseVNode("div", { class: "energy-summary-icon" }, [
                     createBaseVNode("span", { class: "mdi mdi-solar-power" })
                   ], -1)),
-                  createBaseVNode("div", _hoisted_47, [
-                    createBaseVNode("div", _hoisted_48, toDisplayString$1(unref(t)('energy.solar')), 1),
-                    createBaseVNode("div", _hoisted_49, toDisplayString$1(energySummary.value.solarDayElec.toFixed(2)) + " kWh", 1)
+                  createBaseVNode("div", _hoisted_46, [
+                    createBaseVNode("div", _hoisted_47, toDisplayString$1(unref(t)('energy.solar')), 1),
+                    createBaseVNode("div", _hoisted_48, toDisplayString$1(energySummary.value.solarDayElec.toFixed(2)) + " kWh", 1)
                   ])
                 ]),
-                createBaseVNode("div", _hoisted_50, [
+                createBaseVNode("div", _hoisted_49, [
                   _cache[13] || (_cache[13] = createBaseVNode("div", { class: "energy-summary-icon" }, [
                     createBaseVNode("span", { class: "mdi mdi-power-plug" })
                   ], -1)),
-                  createBaseVNode("div", _hoisted_51, [
-                    createBaseVNode("div", _hoisted_52, toDisplayString$1(unref(t)('energy.grid')), 1),
-                    createBaseVNode("div", _hoisted_53, toDisplayString$1(energySummary.value.gridDayElec.toFixed(2)) + " kWh", 1)
+                  createBaseVNode("div", _hoisted_50, [
+                    createBaseVNode("div", _hoisted_51, toDisplayString$1(unref(t)('energy.grid')), 1),
+                    createBaseVNode("div", _hoisted_52, toDisplayString$1(energySummary.value.gridDayElec.toFixed(2)) + " kWh", 1)
                   ])
                 ]),
-                createBaseVNode("div", _hoisted_54, [
+                createBaseVNode("div", _hoisted_53, [
                   _cache[14] || (_cache[14] = createBaseVNode("div", { class: "energy-summary-icon" }, [
                     createBaseVNode("span", { class: "mdi mdi-lightning-bolt" })
                   ], -1)),
-                  createBaseVNode("div", _hoisted_55, [
-                    createBaseVNode("div", _hoisted_56, toDisplayString$1(unref(t)('energy.load')), 1),
-                    createBaseVNode("div", _hoisted_57, toDisplayString$1(energySummary.value.loadDayElec.toFixed(2)) + " kWh", 1)
+                  createBaseVNode("div", _hoisted_54, [
+                    createBaseVNode("div", _hoisted_55, toDisplayString$1(unref(t)('energy.load')), 1),
+                    createBaseVNode("div", _hoisted_56, toDisplayString$1(energySummary.value.loadDayElec.toFixed(2)) + " kWh", 1)
                   ])
                 ]),
-                createBaseVNode("div", _hoisted_58, [
+                createBaseVNode("div", _hoisted_57, [
                   _cache[15] || (_cache[15] = createBaseVNode("div", { class: "energy-summary-icon" }, [
                     createBaseVNode("span", { class: "mdi mdi-battery" })
                   ], -1)),
-                  createBaseVNode("div", _hoisted_59, [
-                    createBaseVNode("div", _hoisted_60, toDisplayString$1(unref(t)('energy.battery')), 1),
-                    createBaseVNode("div", _hoisted_61, toDisplayString$1(energySummary.value.batteryDayElec.toFixed(2)) + " kWh", 1)
+                  createBaseVNode("div", _hoisted_58, [
+                    createBaseVNode("div", _hoisted_59, toDisplayString$1(unref(t)('energy.battery')), 1),
+                    createBaseVNode("div", _hoisted_60, toDisplayString$1(energySummary.value.batteryDayElec.toFixed(2)) + " kWh", 1)
                   ])
                 ]),
-                createBaseVNode("div", _hoisted_62, [
+                createBaseVNode("div", _hoisted_61, [
                   _cache[16] || (_cache[16] = createBaseVNode("div", { class: "energy-summary-icon" }, [
                     createBaseVNode("span", { class: "mdi mdi-power-plug-outline" })
                   ], -1)),
-                  createBaseVNode("div", _hoisted_63, [
-                    createBaseVNode("div", _hoisted_64, toDisplayString$1(unref(t)('energy.grid_buy')), 1),
-                    createBaseVNode("div", _hoisted_65, toDisplayString$1(energySummary.value.gridBuyDayElec.toFixed(2)) + " kWh", 1)
+                  createBaseVNode("div", _hoisted_62, [
+                    createBaseVNode("div", _hoisted_63, toDisplayString$1(unref(t)('energy.grid_buy')), 1),
+                    createBaseVNode("div", _hoisted_64, toDisplayString$1(energySummary.value.gridBuyDayElec.toFixed(2)) + " kWh", 1)
                   ])
                 ]),
-                createBaseVNode("div", _hoisted_66, [
+                createBaseVNode("div", _hoisted_65, [
                   _cache[17] || (_cache[17] = createBaseVNode("div", { class: "energy-summary-icon" }, [
                     createBaseVNode("span", { class: "mdi mdi-battery-charging" })
                   ], -1)),
-                  createBaseVNode("div", _hoisted_67, [
-                    createBaseVNode("div", _hoisted_68, toDisplayString$1(unref(t)('energy.battery_discharge')), 1),
-                    createBaseVNode("div", _hoisted_69, toDisplayString$1(energySummary.value.batteryDischargeDayElec.toFixed(2)) + " kWh", 1)
+                  createBaseVNode("div", _hoisted_66, [
+                    createBaseVNode("div", _hoisted_67, toDisplayString$1(unref(t)('energy.battery_discharge')), 1),
+                    createBaseVNode("div", _hoisted_68, toDisplayString$1(energySummary.value.batteryDischargeDayElec.toFixed(2)) + " kWh", 1)
                   ])
                 ])
               ])
@@ -100993,7 +100989,7 @@ return (_ctx, _cache) => {
 }
 
 };
-const HaVueCard = /*#__PURE__*/_export_sfc(_sfc_main$2, [['styles',[_style_0]],['__scopeId',"data-v-0dc47613"]]);
+const HaVueCard = /*#__PURE__*/_export_sfc(_sfc_main$2, [['styles',[_style_0]],['__scopeId',"data-v-e1b61c9c"]]);
 
 const _sfc_main$1 = {  };
 

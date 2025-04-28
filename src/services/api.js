@@ -134,7 +134,7 @@ api.interceptors.request.use(
         // 添加语言支持到请求头
         config.headers['Accept-Language'] = getHaLanguage();
         config.headers['token'] = localStorage.getItem('token')
-        console.log('发送请求:', config.url, '请求头:', JSON.stringify(config.headers));
+        // console.log('发送请求:', config.url, '请求头:', JSON.stringify(config.headers));
         return config;
     },
     error => {
@@ -145,7 +145,7 @@ api.interceptors.request.use(
 // 响应拦截器
 api.interceptors.response.use(
     response => {
-        console.log('接收到响应:', response.config.url, '响应头:', JSON.stringify(response.headers));
+        // console.log('接收到响应:', response.config.url, '响应头:', JSON.stringify(response.headers));
         const {data} = response;
 
         // 检查响应格式是否符合预期
@@ -374,7 +374,7 @@ export const changeSocketSwitchStatus = async (val, deviceSn) => {
  * @param {number} status - 状态(0: 关闭, 1: 开启)
  */
 export const switchPowerControl = async (val, deviceSn, type) => {
-    let res = await api.post("device/setCustomParams", null, {
+    let res = await api.post("device/setCustomParams",  {
         params: {
             deviceSn: deviceSn,
             deviceType: type,
