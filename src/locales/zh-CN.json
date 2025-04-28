@@ -11,7 +11,7 @@
   "panel.config.error": "配置保存失败，请检查输入",
   "panel.auth_prompt.message": "请点击右上角的配置按钮设置系统凭据",
   "plant.label": "电站:",
-  "ai_plan.label": "AI 绿色计划:",
+  "ai_plan.label": "AI 绿电计划:",
   "device.details": "设备详情",
   "device.detail_section": "详情",
   "device.battery": "电池",

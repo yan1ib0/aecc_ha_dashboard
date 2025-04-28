@@ -2046,7 +2046,7 @@ const toggleCharger = async (deviceSn) => {
     const newStatus = chargerDevice.switchStatus === 1 ? 0 : 1;
 
     // 调用API设置状态
-    const response = await changeChargerSwitchStatus(newStatus, deviceSn,loadDevice.type);
+    const response = await changeChargerSwitchStatus(newStatus, deviceSn,chargerDevice.type);
     console.log(response)
     // 检查返回结果
     if (response && response.result === 0) {
